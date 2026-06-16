@@ -1,0 +1,11 @@
+numpy
+pandas
+scikit-learn
+joblib
+scapy
+mysql-connector-python
+requests
+dwave-neal
+python-dotenv
+lightgbm
+imbalanced-learn

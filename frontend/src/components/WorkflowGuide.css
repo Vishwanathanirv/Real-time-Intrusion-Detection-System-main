@@ -1,0 +1,56 @@
+.workflow-container {
+  padding: 2rem;
+  text-align: center;
+  color: white;
+  background-color: #0e0e0e;
+  min-height: 100vh;
+}
+
+.workflow-title {
+  font-size: 2rem;
+  color: #00c9ff;
+  margin-bottom: 0.5rem;
+}
+
+.workflow-sub {
+  color: #aaa;
+  margin-bottom: 2rem;
+}
+
+.workflow-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.workflow-card {
+  padding: 1.5rem;
+  border-radius: 12px;
+  background: #1c1c1c;
+  border: 2px solid transparent;
+  transition: all 0.3s;
+  cursor: pointer;
+  text-align: left;
+}
+
+.workflow-card:hover {
+  border-color: #00c9ff;
+  box-shadow: 0 0 10px rgba(0, 201, 255, 0.3);
+}
+
+.workflow-card.active {
+  border-color: #00c9ff;
+  background: #111;
+}
+
+.workflow-command {
+  background: #000;
+  color: #0ff;
+  margin-top: 1rem;
+  padding: 0.8rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}

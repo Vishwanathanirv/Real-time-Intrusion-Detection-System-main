@@ -1,0 +1,103 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+
+:root {
+  /* -- Palette -- */
+  --bg-dark: #050511;
+  --bg-panel: rgba(255, 255, 255, 0.03);
+  --bg-panel-hover: rgba(255, 255, 255, 0.06);
+  --primary-cyan: #00f3ff;
+  --primary-purple: #bc13fe;
+  --text-main: #ffffff;
+  --text-muted: #8892b0;
+  --danger: #ff2a6d;
+  --success: #05ff00;
+  --warning: #ffcc00;
+
+  /* -- Effects -- */
+  --glass: blur(16px) saturate(180%);
+  --border-glow: 0 0 10px rgba(0, 243, 255, 0.2);
+  --neon-glow-cyan: 0 0 15px rgba(0, 243, 255, 0.6);
+  --neon-glow-purple: 0 0 15px rgba(188, 19, 254, 0.6);
+  
+  /* -- Transitions -- */
+  --ease: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  font-family: 'Outfit', sans-serif;
+  overflow-x: hidden;
+  background-image: 
+    radial-gradient(circle at 15% 50%, rgba(188, 19, 254, 0.08), transparent 25%),
+    radial-gradient(circle at 85% 30%, rgba(0, 243, 255, 0.08), transparent 25%);
+  min-height: 100vh;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-dark);
+}
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-cyan);
+}
+
+/* Typography Defaults */
+h1, h2, h3, h4 {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+button {
+  font-family: 'Outfit', sans-serif;
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Utility: Quantum Card */
+.quantum-card {
+  background: var(--bg-panel);
+  backdrop-filter: var(--glass);
+  -webkit-backdrop-filter: var(--glass);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 1.5rem;
+  transition: all 0.4s var(--ease);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+
+.quantum-card:hover {
+  border-color: rgba(0, 243, 255, 0.3);
+  box-shadow: 0 10px 40px -10px rgba(0, 243, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+/* Animations */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 10px var(--primary-cyan); }
+  50% { box-shadow: 0 0 25px var(--primary-cyan); }
+}
