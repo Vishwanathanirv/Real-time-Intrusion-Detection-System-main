@@ -1,50 +1,53 @@
 {
-  "generatedAt": "2026-11-14T09:35:32.502Z",
+  "generatedAt": "2026-11-14T17:16:05.572Z",
   "seed": 7,
   "minutes": 60,
-  "packets": 3036347,
-  "attacks": 28,
+  "packets": 3023769,
+  "attacks": 32,
   "perAttack": {
     "port_scan": {
       "injected": 4,
       "detected": 4,
-      "meanTimeToDetectMs": 144
+      "meanTimeToDetectMs": 147
     },
     "host_sweep": {
       "injected": 4,
       "detected": 4,
-      "meanTimeToDetectMs": 618
+      "meanTimeToDetectMs": 540
     },
     "syn_flood": {
       "injected": 4,
       "detected": 4,
-      "meanTimeToDetectMs": 980
+      "meanTimeToDetectMs": 976
     },
     "brute_force": {
       "injected": 4,
       "detected": 4,
-      "meanTimeToDetectMs": 11015
+      "meanTimeToDetectMs": 11503
     },
     "dns_tunnel": {
       "injected": 4,
       "detected": 4,
-      "meanTimeToDetectMs": 7533
+      "meanTimeToDetectMs": 7475
     },
     "beaconing": {
       "injected": 4,
       "detected": 4,
-      "meanTimeToDetectMs": 68358
+      "meanTimeToDetectMs": 51772
     },
     "exfiltration": {
       "injected": 4,
       "detected": 4,
-      "meanTimeToDetectMs": 65912
+      "meanTimeToDetectMs": 59715
+    },
+    "tls_c2": {
+      "injected": 4,
+      "detected": 4,
+      "meanTimeToDetectMs": 10
     }
   },
-  "falseAlertsPerHour": 1,
-  "falseAlertsByType": {
-    "anomaly": 1
-  },
-  "throughputPps": 287934,
-  "avgMicrosPerPacket": 3.21
+  "falseAlertsPerHour": 0,
+  "falseAlertsByType": {},
+  "throughputPps": 242086,
+  "avgMicrosPerPacket": 3.96
 }

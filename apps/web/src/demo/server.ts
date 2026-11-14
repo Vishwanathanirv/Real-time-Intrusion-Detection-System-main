@@ -1,6 +1,9 @@
 import {
   ATTACKS,
   ATTACK_LABELS,
+  DEFAULT_RULES,
+  compileRules,
+  tlsInventory,
   DEFAULT_CONFIG,
   NetworkSimulator,
   PcapStreamReader,
@@ -46,7 +49,7 @@ class DemoSensor {
   private async boot() {
     await new Promise((r) => setTimeout(r, 0));
     this.model = trainBaseline({ seed: 99, minutes: 8 });
-    this.sensor = new Sensor({ config: this.config, model: this.model, onAlert: (a, isNew) => this.onAlert(a, isNew) });
+    this.sensor = new Sensor({ config: this.config, model: this.model, rules: this.rulesText, onAlert: (a, isNew) => this.onAlert(a, isNew) });
     // Backfill two minutes of traffic, with a scan and a brute-force attempt already under way,
     // so the chart and alert list are populated when the page opens.
     const now = Date.now();
@@ -186,6 +189,17 @@ class DemoSensor {
       return ok({ state: this.state });
     }
     if (method === "GET" && p === "/api/config") return ok({ config: this.config });
+    if (method === "GET" && p === "/api/rules") return ok(this.ruleView());
+    if (method === "PUT" && p === "/api/rules") {
+      const text = String((body as { text?: string })?.text ?? "");
+      if (text.length > 200_000) return err(400, "text: too long");
+      const { rules, errors } = compileRules(text);
+      if (errors.length) return { status: 400, data: { error: `${errors.length} rule${errors.length > 1 ? "s" : ""} could not be loaded`, errors } };
+      this.rulesText = text;
+      this.sensor.engine.setRules(rules);
+      return ok(this.ruleView());
+    }
+    if (method === "GET" && p === "/api/tls") return ok({ clients: tlsInventory(this.sensor.engine), commonHosts: this.config.tls.commonHosts });
     if (method === "GET" && p === "/api/evaluation") {
       const r = await fetch("/evaluation.json");
       return r.ok ? ok(await r.json()) : err(404, "Evaluation report not found.");
@@ -193,12 +207,19 @@ class DemoSensor {
     return err(404, "Not found");
   }
 
+  private rulesText = DEFAULT_RULES;
+
+  private ruleView() {
+    const e = this.sensor.engine;
+    return { text: this.rulesText, rules: e.rules.map((r) => ({ sid: r.sid, rev: r.rev, msg: r.msg, proto: r.proto, classtype: r.classtype ?? null, severity: r.severity, mitre: r.mitre?.id ?? null, line: r.line, hits: e.ruleHits.get(r.sid) ?? 0 })) };
+  }
+
   /** Runs a capture through an isolated sensor, entirely on this machine. */
   async analyze(file: File) {
     await this.ready;
     if (file.size > 50 * 1024 * 1024) throw new Error("File is larger than 50 MB.");
     const found = new Map<string, Alert>();
-    const sensor = new Sensor({ config: this.config, model: this.model, onAlert: (a) => found.set(a.id, { ...a }) });
+    const sensor = new Sensor({ config: this.config, model: this.model, rules: this.rulesText, onAlert: (a) => found.set(a.id, { ...a }) });
     let first = Infinity;
     let last = 0;
     let tick = 0;
@@ -230,6 +251,7 @@ class DemoSensor {
       topTalkers: s.topTalkers,
       topPorts: s.topPorts,
       alerts: [...found.values()].sort((a, b) => a.firstSeen - b.firstSeen),
+      tls: tlsInventory(sensor.engine),
     };
   }
 

@@ -1,4 +1,5 @@
 import { Rng } from "./rng";
+import { buildClientHello, ja4, parseClientHello, profileById } from "./tls";
 import { TCP, type AlertType, type Packet } from "./types";
 
 /**
@@ -7,8 +8,8 @@ import { TCP, type AlertType, type Packet } from "./types";
  * generated packet carries a ground-truth label so detection can be measured.
  */
 
-export type AttackKind = "port_scan" | "host_sweep" | "syn_flood" | "brute_force" | "dns_tunnel" | "beaconing" | "exfiltration";
-export const ATTACKS: AttackKind[] = ["port_scan", "host_sweep", "syn_flood", "brute_force", "dns_tunnel", "beaconing", "exfiltration"];
+export type AttackKind = "port_scan" | "host_sweep" | "syn_flood" | "brute_force" | "dns_tunnel" | "beaconing" | "exfiltration" | "tls_c2";
+export const ATTACKS: AttackKind[] = ["port_scan", "host_sweep", "syn_flood", "brute_force", "dns_tunnel", "beaconing", "exfiltration", "tls_c2"];
 
 /** Which alert types count as detecting each attack. */
 export const EXPECTED: Record<AttackKind, AlertType[]> = {
@@ -19,6 +20,7 @@ export const EXPECTED: Record<AttackKind, AlertType[]> = {
   dns_tunnel: ["dns_tunnel"],
   beaconing: ["beaconing"],
   exfiltration: ["anomaly"],
+  tls_c2: ["tls_fingerprint"],
 };
 
 export const ATTACK_LABELS: Record<AttackKind, string> = {
@@ -29,6 +31,7 @@ export const ATTACK_LABELS: Record<AttackKind, string> = {
   dns_tunnel: "DNS tunnelling",
   beaconing: "C2 beaconing",
   exfiltration: "Data exfiltration",
+  tls_c2: "Implant over TLS",
 };
 
 export type LabeledPacket = Packet & { attack?: AttackKind; attackId?: string };
@@ -59,8 +62,28 @@ export class NetworkSimulator {
     return { ts, src, dst, sport, dport, proto, flags, payloadLen, len: hdr + payloadLen, ttl: src.startsWith("10.") ? 64 : this.r.pick([52, 56, 116, 118]), ...extra };
   }
 
-  /** A complete TCP session: handshake, data both ways, FIN teardown. */
-  tcpSession(ts: number, c: string, s: string, dport: number, upBytes: number, downBytes: number, durMs: number, extra: Partial<LabeledPacket> = {}): LabeledPacket[] {
+  /** The browser each workstation uses; most offices standardise, a few people differ. */
+  browserOf(host: string) {
+    const n = Number(host.split(".")[3]);
+    return n % 4 === 3 ? "firefox" : "chromium";
+  }
+
+  private hellos = new Map<string, { len: number; ja4: string }>();
+  /** Builds the real ClientHello once per client and server name, and fingerprints it. */
+  private hello(client: string, sni: string | undefined, sp: number) {
+    const k = `${client}|${sni ?? ""}`;
+    let h = this.hellos.get(k);
+    if (!h) {
+      const bytes = buildClientHello(profileById(client)!, sni, sp);
+      h = { len: bytes.length, ja4: ja4(parseClientHello(bytes)) };
+      this.hellos.set(k, h);
+    }
+    const alpn = profileById(client)!.alpn[0];
+    return { len: h.len, tls: { ja4: h.ja4, client, ...(sni ? { sni } : {}), ...(alpn ? { alpn } : {}) } };
+  }
+
+  /** A complete TCP session: handshake, data both ways, FIN teardown. With `tls`, the first client segment is a ClientHello. */
+  tcpSession(ts: number, c: string, s: string, dport: number, upBytes: number, downBytes: number, durMs: number, extra: Partial<LabeledPacket> = {}, tls?: { client: string; sni?: string }): LabeledPacket[] {
     const sp = this.eph();
     const out: LabeledPacket[] = [];
     let t = ts;
@@ -68,6 +91,11 @@ export class NetworkSimulator {
     out.push(this.pkt(t, c, s, sp, dport, "tcp", TCP.SYN, 0, extra));
     out.push(this.pkt((t += rtt / 2), s, c, dport, sp, "tcp", TCP.SYN | TCP.ACK, 0, extra));
     out.push(this.pkt((t += rtt / 2), c, s, sp, dport, "tcp", TCP.ACK, 0, extra));
+    if (tls) {
+      const h = this.hello(tls.client, tls.sni, sp);
+      out.push(this.pkt((t += 0.3), c, s, sp, dport, "tcp", TCP.ACK | TCP.PSH, h.len, { ...extra, tls: h.tls }));
+      upBytes = Math.max(0, upBytes - h.len);
+    }
     const segs = Math.max(1, Math.ceil((upBytes + downBytes) / 1400));
     const step = Math.max(1, durMs / (segs + 1));
     let up = upBytes;
@@ -107,9 +135,11 @@ export class NetworkSimulator {
       if (roll < 0.45) {
         const name = `${r.pick(SUBS)}.${r.pick(DOMAINS)}`;
         out.push(...this.dnsQuery(t, h, name));
-        out.push(...this.tcpSession(t + 20, h, r.pick(INTERNET), 443, r.int(400, 3000), Math.round(r.logNormal(40_000, 1.2)), r.int(80, 2500)));
+        const client = r.chance(0.12) ? "os-update" : this.browserOf(h);
+        out.push(...this.tcpSession(t + 20, h, r.pick(INTERNET), 443, r.int(400, 3000), Math.round(r.logNormal(40_000, 1.2)), r.int(80, 2500), {}, { client, sni: client === "os-update" ? undefined : name }));
       } else if (roll < 0.62) {
-        out.push(...this.tcpSession(t, h, SERVERS.web, r.pick([80, 443]), r.int(300, 2000), Math.round(r.logNormal(15_000, 1)), r.int(30, 800)));
+        const port = r.pick([80, 443]);
+        out.push(...this.tcpSession(t, h, SERVERS.web, port, r.int(300, 2000), Math.round(r.logNormal(15_000, 1)), r.int(30, 800), {}, port === 443 ? { client: this.browserOf(h), sni: "portal.office.lan" } : undefined));
       } else if (roll < 0.74) {
         out.push(...this.tcpSession(t, h, SERVERS.files, 445, Math.round(r.logNormal(8000, 1.3)), Math.round(r.logNormal(60_000, 1.3)), r.int(200, 4000)));
       } else if (roll < 0.82) {
@@ -194,6 +224,19 @@ export class NetworkSimulator {
         for (let i = 0; i < r.int(12, 20); i++) {
           out.push(...this.tcpSession(t, host, c2, 443, r.int(200, 400), r.int(300, 600), r.int(50, 200), tag));
           t += every * (1 + r.normal(0, 0.03));
+        }
+        break;
+      }
+      case "tls_c2": {
+        // An implant with its own TLS library calls home with randomised sleep, so timing
+        // analysis misses it. Its handshake still gives it away.
+        const host = r.pick(this.hosts);
+        const c2 = `45.${r.int(1, 250)}.${r.int(1, 250)}.${r.int(1, 250)}`;
+        const client = r.pick(["implant-go", "implant-py"]);
+        const sni = r.chance(0.5) ? `${r.pick(["cdn", "static", "telemetry", "api"])}.${r.pick(["cloud-sync", "msft-update", "edge-content"])}-${r.int(100, 999)}.net` : undefined;
+        for (let i = 0; i < r.int(5, 9); i++) {
+          out.push(...this.tcpSession(t, host, c2, 443, r.int(400, 1400), r.int(200, 4000), r.int(80, 600), tag, { client, sni }));
+          t += r.int(2_000, 15_000);
         }
         break;
       }

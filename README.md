@@ -7,7 +7,7 @@ PacketEye watches network traffic, rebuilds every connection, and raises alerts 
 - an uploaded Wireshark or tcpdump capture (`.pcap`)
 - a built-in office-network simulator, which can launch attacks on demand
 
-It is built **end to end in TypeScript**: a dependency-free pcap parser, flow tracking, seven detectors, an unsupervised anomaly model, a Node.js API and a React dashboard.
+It is built **end to end in TypeScript**: a pcap parser, TLS ClientHello parsing with **JA4 fingerprinting**, flow tracking, eight behavioural detectors, an unsupervised anomaly model, a **Suricata-compatible rule engine**, a Node.js API and a React dashboard.
 
 ![Overview](docs/screenshots/overview.png)
 
@@ -15,20 +15,21 @@ It is built **end to end in TypeScript**: a dependency-free pcap parser, flow tr
 
 ## Measured detection
 
-`npm run evaluate` replays **60 minutes of labelled office traffic (3.0 million packets)** with 28 scheduled attacks, then scores every detector on two things: whether it fired, and how fast.
+`npm run evaluate` replays **60 minutes of labelled office traffic (3.0 million packets)** with 32 scheduled attacks, then scores every detector on two things: whether it fired, and how fast.
 
 | Attack | MITRE ATT&CK | Detected | Mean time to detect |
 | --- | --- | --- | --- |
 | Port scan | T1046 | 4/4 | 0.1 s |
-| Host sweep | T1018 | 4/4 | 0.6 s |
+| Host sweep | T1018 | 4/4 | 0.5 s |
 | SYN flood / DDoS (spoofed sources) | T1498.001 | 4/4 | 1.0 s |
-| SSH brute force | T1110.001 | 4/4 | 11.0 s |
+| SSH brute force | T1110.001 | 4/4 | 11.5 s |
 | DNS tunnelling | T1071.004 | 4/4 | 7.5 s |
-| C2 beaconing | T1071.001 | 4/4 | 68.4 s |
-| Data exfiltration (anomaly model) | TA0010 | 4/4 | 65.9 s |
+| C2 beaconing | T1071.001 | 4/4 | 51.8 s |
+| Data exfiltration (anomaly model) | TA0010 | 4/4 | 59.7 s |
+| Implant over TLS with randomised sleep (JA4) | T1573 | 4/4 | first handshake |
 
-- On clean background traffic it raises **1 false alert per hour**.
-- One CPU core handles about **288,000 packets per second (3.2 µs per packet)**. That covers decoding, flow tracking and all seven detectors.
+- On clean background traffic it raises **0 false alerts per hour**, with the default ruleset loaded.
+- One CPU core handles about **240,000 packets per second (4.0 µs per packet)**. That covers decoding, TLS fingerprinting, flow tracking, all detectors and the rules.
 - A second seed gives the same coverage, so the results do not depend on one lucky run.
 
 Beaconing and exfiltration are judged on whole connections, so they fire when the pattern or flow completes. The packet-level detectors fire within seconds.
@@ -42,10 +43,11 @@ flowchart LR
   NIC[Network interface<br/>tcpdump -w -] --> P
   UP[Uploaded .pcap] --> P
   SIM[Office simulator<br/>+ attack injector] --> S
-  P[Streaming pcap decoder<br/>Ethernet · VLAN · SLL · IPv4<br/>TCP · UDP · ICMP · DNS] --> S
+  P[Streaming pcap decoder<br/>Ethernet · VLAN · SLL · IPv4<br/>TCP · UDP · ICMP · DNS · TLS ClientHello → JA4] --> S
   subgraph S[Sensor]
     FT[Bidirectional flow table<br/>handshake, idle and active timeouts]
-    PD[Packet detectors<br/>scan · sweep · SYN flood · DNS tunnel]
+    PD[Packet detectors<br/>scan · sweep · SYN flood · DNS tunnel · rare TLS client]
+    RL[Rule engine<br/>Suricata syntax · thresholds]
     FD[Flow detectors<br/>brute force · beaconing]
     IF[Isolation forest<br/>trained on normal flows]
     FT --> FD
@@ -65,6 +67,8 @@ flowchart LR
 | Brute force | Short-lived connections to SSH, RDP, FTP, Telnet, database or VNC ports, per source and target |
 | DNS tunnelling | Queries per registered domain, uniqueness, Shannon entropy and length of subdomains |
 | Beaconing | Coefficient of variation of the gaps between connections to one external endpoint |
+| Rare TLS client | Each TLS ClientHello is turned into a JA4 fingerprint (FoxIO specification, checked against its published example). Browsers and system services are shared by many hosts; a fingerprint used by fewer than three hosts, talking to the internet, raises an alert. It needs no signatures and survives encryption and randomised timing. |
+| Rules | Suricata-syntax signatures on addresses, ports, TCP flags, DNS names, TLS server names and JA4 (`dns.query`, `tls.sni`, `ja4.hash`), with `threshold` and `detection_filter`. Unsupported keywords are rejected with their line number, never ignored. |
 | Anomaly | An isolation forest (written from scratch) over 10 flow features, trained only on normal traffic, so it needs no labels and can flag unseen behaviour |
 
 Repeated hits are grouped into one alert with a running count, so a 5,000-packet flood is one row in the queue, not 5,000.
@@ -76,8 +80,10 @@ Repeated hits are grouped into one alert with a running count, so a 5,000-packet
   - a two-minute traffic chart with alert markers
   - top talkers, protocol mix and top ports
   - one-click attack simulation
+- **TLS clients:** an inventory of every TLS fingerprint on the network, rarest first, with the hosts using it, server names and what the software looks like.
+- **Rules:** edit the Suricata ruleset in the browser. Bad rules are rejected with line numbers; each loaded rule shows how many packets it has matched.
 - **Alerts:** a triage queue (open, acknowledged, resolved) with severity filters. Each alert shows its MITRE technique, evidence, recommended response steps and analyst notes.
-- **Analyse pcap:** drop in a capture of up to 50 MB and get findings, flows and top talkers. A sample capture containing every attack type is built in.
+- **Analyse pcap:** drop in a capture of up to 50 MB and get findings, flows, top talkers and the TLS clients in it. A sample capture containing every attack type is built in.
 - **Coverage:** the evaluation report above, generated from the code.
 
 | Alert detail | Analyse a capture |
@@ -127,7 +133,9 @@ npm run evaluate                  # SEED=21 MINUTES=45 npm run evaluate
 | `POST` | `/api/pcap` | Analyse an uploaded capture (multipart `file`) |
 | `GET` | `/api/pcap/sample` | Download a sample capture with every attack type |
 | `GET` | `/api/stats`, `/api/evaluation`, `/api/config` | Traffic stats, coverage report and detector thresholds |
-| `POST` | `/api/attacks`, `PUT /api/live`, `PUT /api/config` | Simulation and tuning. Protected by `ADMIN_TOKEN` when set. |
+| `GET` | `/api/tls` | TLS fingerprint inventory: JA4, hosts, server names, profile |
+| `GET` | `/api/rules`, `PUT /api/rules` | Read the ruleset with hit counts, or replace it (`{"text": "..."}`). Invalid rules return 400 with line numbers. |
+| `POST` | `/api/attacks`, `PUT /api/live`, `PUT /api/config`, `PUT /api/rules` | Simulation, tuning and rules. Protected by `ADMIN_TOKEN` when set. |
 
 ## Live demo on Vercel
 
@@ -156,7 +164,7 @@ Only monitor networks you own or are authorised to monitor. The attack simulator
 ## Roadmap
 
 - IPv6 and pcapng support
-- Suricata-compatible rule import
+- JA4S (server) and JA4H (HTTP client) fingerprints
 - Exporting alerts as JSON or to a SIEM
 
 ## Tech stack

@@ -1,3 +1,4 @@
+import { buildClientHello, ja4, looksLikeClientHello, parseClientHello, profileById } from "./tls";
 import { TCP, type Packet, type Proto } from "./types";
 
 /**
@@ -69,6 +70,7 @@ export function decodeFrame(frame: Uint8Array, linkType: number, ts: number, wir
   let flags = 0;
   let payload = 0;
   let dnsQuery: string | undefined;
+  let tls: Packet["tls"];
   if (protoNum === 6) {
     if (ipEnd < l4 + 20) return null;
     proto = "tcp";
@@ -77,6 +79,15 @@ export function decodeFrame(frame: Uint8Array, linkType: number, ts: number, wir
     const dataOff = (frame[l4 + 12] >> 4) * 4;
     flags = frame[l4 + 13] & 0x3f;
     payload = Math.max(0, totalLen - ihl - dataOff);
+    const ps = l4 + dataOff;
+    if (payload > 0 && looksLikeClientHello(frame, ps, ipEnd)) {
+      try {
+        const h = parseClientHello(frame, ps, ipEnd);
+        tls = { ja4: ja4(h), ...(h.sni ? { sni: h.sni } : {}), ...(h.alpn[0] ? { alpn: h.alpn[0] } : {}) };
+      } catch {
+        // Truncated by the capture's snaplen: keep the packet, skip the fingerprint.
+      }
+    }
   } else if (protoNum === 17) {
     if (ipEnd < l4 + 8) return null;
     proto = "udp";
@@ -88,7 +99,7 @@ export function decodeFrame(frame: Uint8Array, linkType: number, ts: number, wir
     proto = "icmp";
     payload = Math.max(0, totalLen - ihl - 8);
   } else return null;
-  return { ts, src, dst, sport, dport, proto, len: wireLen, flags, ttl, payloadLen: payload, ...(dnsQuery ? { dnsQuery } : {}) };
+  return { ts, src, dst, sport, dport, proto, len: wireLen, flags, ttl, payloadLen: payload, ...(dnsQuery ? { dnsQuery } : {}), ...(tls ? { tls } : {}) };
 }
 
 type Header = { little: boolean; nano: boolean; linkType: number };
@@ -162,11 +173,18 @@ function encodeDns(name: string): number[] {
   return out;
 }
 
-/** Builds an Ethernet/IPv4 frame for a packet. Payload bytes are zero except DNS questions. */
+/** Rebuilds the ClientHello bytes for a simulated TLS packet. */
+function helloBytes(p: Packet): Uint8Array | null {
+  const profile = p.tls?.client ? profileById(p.tls.client) : undefined;
+  return profile ? buildClientHello(profile, p.tls!.sni, p.sport) : null;
+}
+
+/** Builds an Ethernet/IPv4 frame for a packet. Payload bytes are zero except DNS questions and TLS ClientHellos. */
 export function encodeFrame(p: Packet): Uint8Array {
   const dns = p.proto === "udp" && p.dnsQuery ? encodeDns(p.dnsQuery) : null;
+  const hello = p.proto === "tcp" ? helloBytes(p) : null;
   const l4Len = p.proto === "tcp" ? 20 : 8;
-  const payload = dns ? dns.length : Math.min(p.payloadLen, 1400);
+  const payload = dns ? dns.length : hello ? hello.length : Math.min(p.payloadLen, 1400);
   const ipLen = 20 + l4Len + payload;
   const f = new Uint8Array(14 + ipLen);
   f.set([0x02, 0, 0, 0, 0, 1, 0x02, 0, 0, 0, 0, 2, 0x08, 0x00]);
@@ -188,6 +206,7 @@ export function encodeFrame(p: Packet): Uint8Array {
   if (p.proto === "tcp") {
     f[l4 + 12] = 5 << 4;
     f[l4 + 13] = p.flags;
+    if (hello) f.set(hello, l4 + 20);
   } else if (p.proto === "udp") {
     const ulen = 8 + payload;
     f[l4 + 4] = ulen >> 8;
@@ -197,12 +216,21 @@ export function encodeFrame(p: Packet): Uint8Array {
   return f;
 }
 
-/** Writes a pcap. `snaplen` truncates stored bytes like `tcpdump -s`; headers are all detection needs. */
-const encodedLength = (p: Packet) => 14 + 20 + (p.proto === "tcp" ? 20 : 8) + (p.proto === "udp" && p.dnsQuery ? p.dnsQuery.length + 18 : Math.min(p.payloadLen, 1400));
-
+/**
+ * Writes a pcap. `snaplen` truncates stored bytes like `tcpdump -s` (headers are all most detectors
+ * need), except that DNS questions and TLS ClientHellos are always kept whole so the file can still
+ * be fingerprinted.
+ */
 export function writePcap(packets: Packet[], snaplen = 65535): Uint8Array {
+  let longest = snaplen;
+  const full: number[] = [];
   const frames = packets.map((p) => {
     const f = encodeFrame(p);
+    full.push(f.length);
+    if (p.tls || p.dnsQuery) {
+      longest = Math.max(longest, f.length);
+      return f;
+    }
     return f.length > snaplen ? f.subarray(0, snaplen) : f;
   });
   const size = 24 + frames.reduce((a, f) => a + 16 + f.length, 0);
@@ -211,7 +239,7 @@ export function writePcap(packets: Packet[], snaplen = 65535): Uint8Array {
   v.setUint32(0, 0xa1b2c3d4, true);
   v.setUint16(4, 2, true);
   v.setUint16(6, 4, true);
-  v.setUint32(16, snaplen, true);
+  v.setUint32(16, longest, true);
   v.setUint32(20, LINK_ETHERNET, true);
   let off = 24;
   packets.forEach((p, i) => {
@@ -220,7 +248,7 @@ export function writePcap(packets: Packet[], snaplen = 65535): Uint8Array {
     v.setUint32(off, sec, true);
     v.setUint32(off + 4, Math.round((p.ts - sec * 1000) * 1000), true);
     v.setUint32(off + 8, f.length, true);
-    v.setUint32(off + 12, Math.max(encodedLength(p), p.len), true);
+    v.setUint32(off + 12, Math.max(full[i], p.len), true);
     out.set(f, off + 16);
     off += 16 + f.length;
   });

@@ -1,6 +1,8 @@
 import { flowVector } from "./flows";
 import { anomalyScore, type IForestModel } from "./iforest";
 import { isSynOnly } from "./pcap";
+import { RuleLimiter, type CompiledRule } from "./rules";
+import { describeJa4 } from "./tls";
 import { MITRE, TCP, type Alert, type AlertType, type Flow, type Packet, type Severity } from "./types";
 
 /** Tunable thresholds. Defaults follow common Suricata/Zeek-style heuristics. */
@@ -12,6 +14,8 @@ export type DetectorConfig = {
   dnsTunnel: { windowMs: number; minQueries: number; entropy: number; labelLength: number };
   beacon: { minConnections: number; maxJitter: number; minIntervalMs: number };
   anomaly: { threshold: number; minBytes: number };
+  /** A TLS fingerprint is "common" once this many internal hosts use it; until then it is rare. */
+  tls: { commonHosts: number; learnMs: number; allow: string[]; deny: string[] };
   dedupMs: number;
 };
 
@@ -23,8 +27,12 @@ export const DEFAULT_CONFIG: DetectorConfig = {
   dnsTunnel: { windowMs: 60_000, minQueries: 15, entropy: 3.6, labelLength: 24 },
   beacon: { minConnections: 8, maxJitter: 0.12, minIntervalMs: 2_000 },
   anomaly: { threshold: 0.7, minBytes: 2_000 },
+  tls: { commonHosts: 3, learnMs: 10 * 60_000, allow: [], deny: [] },
   dedupMs: 60_000,
 };
+
+/** The isolation forest plus the TLS fingerprints seen on clean traffic. */
+export type BaselineModel = IForestModel & { tlsClients?: string[] };
 
 /** Shannon entropy in bits per character. */
 export function entropy(s: string): number {
@@ -55,7 +63,7 @@ class Window<T> {
   }
 }
 
-type Emit = (a: Omit<Alert, "id" | "count" | "firstSeen" | "lastSeen"> & { ts: number }) => void;
+type Emit = (a: Omit<Alert, "id" | "count" | "firstSeen" | "lastSeen"> & { ts: number; key?: string }) => void;
 
 const isPrivate = (ip: string) => ip.startsWith("10.") || ip.startsWith("192.168.") || /^172\.(1[6-9]|2\d|3[01])\./.test(ip);
 
@@ -69,11 +77,26 @@ export class DetectionEngine {
   private dns = new Map<string, Window<string>>();
   private conns = new Map<string, number[]>();
   private lastSweep = 0;
+  /** Which internal hosts present each TLS fingerprint. */
+  readonly tlsClients = new Map<string, { hosts: Set<string>; snis: Set<string>; first: number; last: number; connections: number }>();
+  private known = new Set<string>();
+  private started = -1;
+  rules: CompiledRule[] = [];
+  readonly ruleHits = new Map<number, number>();
+  private limiter = new RuleLimiter();
 
-  constructor(public config: DetectorConfig = DEFAULT_CONFIG, public model: IForestModel | null = null, private onAlert: (a: Alert, isNew: boolean) => void = () => {}) {}
+  constructor(public config: DetectorConfig = DEFAULT_CONFIG, public model: BaselineModel | null = null, private onAlert: (a: Alert, isNew: boolean) => void = () => {}) {
+    for (const f of model?.tlsClients ?? []) this.known.add(f);
+  }
+
+  setRules(rules: CompiledRule[]) {
+    this.rules = rules;
+    this.ruleHits.clear();
+    this.limiter = new RuleLimiter();
+  }
 
   private emit: Emit = (a) => {
-    const key = `${a.type}|${a.src}|${a.dst}`;
+    const key = a.key ?? `${a.type}|${a.src}|${a.dst}`;
     const prev = this.alerts.get(key);
     if (prev && a.ts - prev.lastSeen < this.config.dedupMs) {
       prev.count++;
@@ -101,6 +124,26 @@ export class DetectionEngine {
   /** Packet-level detectors. */
   packet(p: Packet): void {
     const c = this.config;
+    if (this.started < 0) this.started = p.ts;
+    if (p.tls) this.tlsClient(p);
+    for (const r of this.rules) {
+      const matched = r.match(p);
+      if (matched === null) continue;
+      this.ruleHits.set(r.sid, (this.ruleHits.get(r.sid) ?? 0) + 1);
+      if (!this.limiter.allow(r, p)) continue;
+      this.emit({
+        key: `rule:${r.sid}|${p.src}|${p.dst}`,
+        type: "rule",
+        severity: r.severity,
+        ts: p.ts,
+        src: p.src,
+        dst: `${p.dst}:${p.dport}`,
+        title: r.msg,
+        description: `Rule ${r.sid} matched ${matched}${r.classtype ? ` (${r.classtype})` : ""}.`,
+        mitre: r.mitre ? { id: r.mitre.id, name: r.mitre.name || r.msg, tactic: r.mitre.tactic } : MITRE.rule,
+        evidence: { sid: r.sid, rev: r.rev, matched, ...(r.classtype ? { classtype: r.classtype } : {}), rule: r.text.slice(0, 240) },
+      });
+    }
     if (p.proto === "tcp" && isSynOnly(p)) {
       // Vertical scan: one source probing many ports on one host.
       const w = this.win(this.scans, `${p.src}>${p.dst}`);
@@ -149,6 +192,38 @@ export class DetectionEngine {
         }
       }
     }
+  }
+
+  /**
+   * TLS client fingerprinting. Browsers and OS services are shared by many hosts; an implant's
+   * TLS library is usually on one machine only. A fingerprint that few hosts use, talking to
+   * the internet, after the learning period, is worth a look.
+   */
+  private tlsClient(p: Packet) {
+    const fp = p.tls!.ja4;
+    if (!isPrivate(p.src)) return;
+    let c = this.tlsClients.get(fp);
+    if (!c) this.tlsClients.set(fp, (c = { hosts: new Set(), snis: new Set(), first: p.ts, last: p.ts, connections: 0 }));
+    c.hosts.add(p.src);
+    if (p.tls!.sni && c.snis.size < 8) c.snis.add(p.tls!.sni);
+    c.last = p.ts;
+    c.connections++;
+    const cfg = this.config.tls;
+    const learning = p.ts - this.started < cfg.learnMs && !this.model?.tlsClients;
+    if (learning || c.hosts.size >= cfg.commonHosts) this.known.add(fp);
+    const denied = cfg.deny.includes(fp);
+    if (isPrivate(p.dst) || (!denied && (this.known.has(fp) || cfg.allow.includes(fp)))) return;
+    const known = describeJa4(fp);
+    this.raise(
+      "tls_fingerprint",
+      denied ? "high" : !p.tls!.alpn ? "high" : "medium",
+      p.ts,
+      p.src,
+      `${p.dst}:${p.dport}`,
+      denied ? `Blocked TLS client on ${p.src}` : `Rare TLS client on ${p.src}`,
+      `${p.src} opened an encrypted connection to ${p.dst} with a TLS fingerprint ${denied ? "on the deny list" : `used by ${c.hosts.size} host${c.hosts.size > 1 ? "s" : ""} on this network, unlike the browsers and services around it`}.${p.tls!.alpn ? "" : " It offered no ALPN, which browsers always do."}${known ? ` It matches the profile "${known}".` : ""}`,
+      { ja4: fp, sni: p.tls!.sni ?? "(none)", alpn: p.tls!.alpn ?? "(none)", hostsWithFingerprint: c.hosts.size, connections: c.connections, ...(known ? { profile: known } : {}) },
+    );
   }
 
   /** Flow-level detectors, run when a flow finishes. */
@@ -204,6 +279,7 @@ export class DetectionEngine {
     prune(this.dns, this.config.dnsTunnel.windowMs);
     for (const [k, s] of this.conns) if (now - s[s.length - 1] > 10 * 60_000) this.conns.delete(k);
     for (const [k, a] of this.alerts) if (now - a.lastSeen > 6 * 60 * 60_000) this.alerts.delete(k);
+    this.limiter.prune(now);
   }
 }
 

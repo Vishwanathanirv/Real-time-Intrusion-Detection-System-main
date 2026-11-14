@@ -9,12 +9,16 @@ import { Overview } from "./pages/Overview";
 import { Alerts } from "./pages/Alerts";
 import { Analyze } from "./pages/Analyze";
 import { Detection } from "./pages/Detection";
+import { Rules } from "./pages/Rules";
+import { Tls } from "./pages/Tls";
 
 const NAV = [
   { to: "/", n: "01", t: "Overview" },
   { to: "/alerts", n: "02", t: "Alerts" },
-  { to: "/analyze", n: "03", t: "Analyse pcap" },
-  { to: "/detection", n: "04", t: "Coverage" },
+  { to: "/tls", n: "03", t: "TLS clients" },
+  { to: "/rules", n: "04", t: "Rules" },
+  { to: "/analyze", n: "05", t: "Analyse pcap" },
+  { to: "/detection", n: "06", t: "Coverage" },
 ];
 
 function Radar() {
@@ -98,6 +102,8 @@ function Shell() {
             <Route path="/" element={<Overview />} />
             <Route path="/alerts" element={<Alerts />} />
             <Route path="/analyze" element={<Analyze />} />
+            <Route path="/tls" element={<Tls />} />
+            <Route path="/rules" element={<Rules />} />
             <Route path="/detection" element={<Detection />} />
             <Route path="*" element={<p className="text-muted">Page not found.</p>} />
           </Routes>

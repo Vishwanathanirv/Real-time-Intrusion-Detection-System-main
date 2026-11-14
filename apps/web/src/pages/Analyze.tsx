@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { bytes, DEMO, num, type Alert } from "../lib";
 import { AlertDrawer, AlertRow, Bars, Kpi, Panel } from "../ui";
+import { TlsTable, type TlsClient } from "./Tls";
 
 type Result = {
   file: string;
@@ -13,6 +14,7 @@ type Result = {
   topTalkers: { ip: string; bytes: number; packets: number }[];
   topPorts: { port: number; packets: number }[];
   alerts: Alert[];
+  tls?: TlsClient[];
 };
 
 export function Analyze() {
@@ -122,6 +124,11 @@ export function Analyze() {
               </div>
             </Panel>
           </div>
+          {result.tls && result.tls.length > 0 && (
+            <Panel title={`TLS clients in this capture (${result.tls.length})`}>
+              <TlsTable clients={result.tls} common={3} />
+            </Panel>
+          )}
         </>
       )}
       {open && <AlertDrawer alert={open} onClose={() => setOpen(null)} />}

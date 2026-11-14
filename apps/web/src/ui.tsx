@@ -105,6 +105,8 @@ const NEXT_STEPS: Record<string, string[]> = {
   brute_force: ["Block the source and check auth logs for any successful login.", "Enforce key-based SSH and disable password login.", "Add fail2ban or an equivalent lockout."],
   dns_tunnel: ["Isolate the host: something on it is encoding data into DNS.", "Block the domain on the resolver and sinkhole it.", "Collect the process list and look for persistence."],
   beaconing: ["Treat the host as possibly compromised and isolate it.", "Look up the destination in threat intelligence.", "Find the process making the connections (ss -tp, EDR)."],
+  tls_fingerprint: ["Find the process behind the connection on that host (EDR, or ss -tp / netstat -b).", "Search for the same JA4 across the estate: one machine or many?", "Block the destination, and add the JA4 to a rule if it is confirmed malicious."],
+  rule: ["Read the rule's message and the matched value in the evidence.", "Check whether the match is expected for this host before escalating.", "Tune or disable the rule on the Rules page if it is noisy."],
   anomaly: ["Confirm with the host owner whether the transfer is expected.", "Check the destination's reputation and the data involved.", "Tune the anomaly threshold if this is normal for your network."],
 };
 
@@ -145,7 +147,7 @@ export function AlertDrawer({ alert, onClose, onChange }: { alert: Alert; onClos
 
         <div className="mt-6 rounded-sm border border-line p-4">
           <div className="label">MITRE ATT&amp;CK</div>
-          <a className="mt-2 block text-sm hover:underline" href={`https://attack.mitre.org/techniques/${a.mitre.id.replace(".", "/")}/`} target="_blank" rel="noreferrer">
+          <a className="mt-2 block text-sm hover:underline" href={/^T\d/.test(a.mitre.id) ? `https://attack.mitre.org/techniques/${a.mitre.id.replace(".", "/")}/` : undefined} target="_blank" rel="noreferrer">
             <span className="font-mono text-accent">{a.mitre.id}</span> {a.mitre.name}
           </a>
           <div className="mt-1 text-xs text-faint">Tactic: {a.mitre.tactic}</div>

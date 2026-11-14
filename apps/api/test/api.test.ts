@@ -83,3 +83,42 @@ describe("Telegram notifier", () => {
     expect(await new TelegramNotifier("", "").send(alert)).toBe(false);
   });
 });
+
+describe("rules and TLS fingerprints", () => {
+  const auth = { authorization: "Bearer t0ken" };
+
+  it("serves the active ruleset with hit counters", async () => {
+    const r = (await app.inject("/api/rules")).json();
+    expect(r.text).toContain("sid:1000001");
+    expect(r.rules.length).toBeGreaterThanOrEqual(8);
+    expect(r.rules[0]).toMatchObject({ hits: 0 });
+  });
+
+  it("rejects a broken ruleset with line numbers and keeps the old one", async () => {
+    const bad = await app.inject({ method: "PUT", url: "/api/rules", headers: auth, payload: { text: 'alert tcp any any -> any any (msg:"no sid";)\nalert tcp any any -> any 22 (msg:"ok"; sid:5;)' } });
+    expect(bad.statusCode).toBe(400);
+    expect(bad.json().errors).toEqual([{ line: 1, message: "every rule needs a sid" }]);
+    expect((await app.inject("/api/rules")).json().rules.length).toBeGreaterThanOrEqual(8);
+  });
+
+  it("requires the admin token to change rules, then applies them to traffic", async () => {
+    const text = 'alert tls $HOME_NET any -> $EXTERNAL_NET any (msg:"Test SNI"; tls.sni; content:"evil.example"; endswith; sid:7000001;)';
+    expect((await app.inject({ method: "PUT", url: "/api/rules", payload: { text } })).statusCode).toBe(401);
+    const ok = await app.inject({ method: "PUT", url: "/api/rules", headers: auth, payload: { text } });
+    expect(ok.json().rules).toHaveLength(1);
+    const seen: Alert[] = [];
+    live.on("alert", (a: Alert) => seen.push(a));
+    live.sensor.ingest({ ts: Date.now(), src: "10.0.0.120", dst: "45.6.7.8", sport: 51515, dport: 443, proto: "tcp", len: 400, flags: 0x18, ttl: 64, payloadLen: 340, tls: { ja4: "t13d1516h2_8daaf6152771_e5627efa2ab1", sni: "cdn.evil.example", alpn: "h2" } });
+    expect(seen.some((a) => a.type === "rule" && a.evidence.sid === 7000001)).toBe(true);
+    expect((await app.inject("/api/rules")).json().rules[0].hits).toBe(1);
+  });
+
+  it("finds the implant's TLS client in the sample capture and lists every fingerprint", async () => {
+    const pcap = (await app.inject("/api/pcap/sample")).rawPayload;
+    const r = (await app.inject({ method: "POST", url: "/api/pcap", ...multipart("sample.pcap", new Uint8Array(pcap)) })).json();
+    expect(r.alerts.some((a: Alert) => a.type === "tls_fingerprint")).toBe(true);
+    expect(r.tls.length).toBeGreaterThanOrEqual(4);
+    const chromium = r.tls.find((c: { ja4: string }) => c.ja4 === "t13d1516h2_8daaf6152771_e5627efa2ab1");
+    expect(chromium.hosts).toBeGreaterThan(3);
+  });
+});

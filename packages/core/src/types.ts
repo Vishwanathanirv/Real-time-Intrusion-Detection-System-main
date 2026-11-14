@@ -14,6 +14,8 @@ export type Packet = {
   flags: number; // TCP flags, 0 otherwise
   ttl: number;
   dnsQuery?: string;
+  /** Present on packets that carry a TLS ClientHello. */
+  tls?: { ja4: string; sni?: string; alpn?: string; client?: string };
   payloadLen: number;
 };
 
@@ -45,7 +47,7 @@ export type Severity = "low" | "medium" | "high" | "critical";
 
 export type Mitre = { id: string; name: string; tactic: string };
 
-export type AlertType = "port_scan" | "host_sweep" | "syn_flood" | "brute_force" | "dns_tunnel" | "beaconing" | "anomaly";
+export type AlertType = "port_scan" | "host_sweep" | "syn_flood" | "brute_force" | "dns_tunnel" | "beaconing" | "anomaly" | "tls_fingerprint" | "rule";
 
 export type Alert = {
   id: string;
@@ -70,4 +72,6 @@ export const MITRE: Record<AlertType, Mitre> = {
   dns_tunnel: { id: "T1071.004", name: "Application Layer Protocol: DNS", tactic: "Command and Control" },
   beaconing: { id: "T1071.001", name: "Application Layer Protocol: Web Protocols (beaconing)", tactic: "Command and Control" },
   anomaly: { id: "TA0011", name: "Unusual flow (unsupervised)", tactic: "Command and Control / Exfiltration" },
+  tls_fingerprint: { id: "T1573", name: "Encrypted Channel", tactic: "Command and Control" },
+  rule: { id: "-", name: "Signature match", tactic: "Detection rule" },
 };

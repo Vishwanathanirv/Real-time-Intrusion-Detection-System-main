@@ -1,6 +1,9 @@
-import { DEFAULT_CONFIG, DetectionEngine, type DetectorConfig } from "./detectors";
+import { DEFAULT_CONFIG, DetectionEngine, type BaselineModel, type DetectorConfig } from "./detectors";
+import { DEFAULT_RULES } from "./default-rules";
+import { compileRules } from "./rules";
 import { FlowTable, flowVector } from "./flows";
-import { trainIForest, type IForestModel } from "./iforest";
+import { trainIForest } from "./iforest";
+import { describeJa4 } from "./tls";
 import { NetworkSimulator } from "./simulator";
 import type { Alert, Flow, Packet } from "./types";
 
@@ -30,11 +33,12 @@ export class Sensor {
   private series = new Map<number, { packets: number; bytes: number; alerts: number }>();
   processingNs = 0;
 
-  constructor(opts: { config?: DetectorConfig; model?: IForestModel | null; onAlert?: (a: Alert, isNew: boolean) => void; onFlow?: (f: Flow) => void } = {}) {
+  constructor(opts: { config?: DetectorConfig; model?: BaselineModel | null; rules?: string | null; onAlert?: (a: Alert, isNew: boolean) => void; onFlow?: (f: Flow) => void } = {}) {
     this.engine = new DetectionEngine(opts.config ?? DEFAULT_CONFIG, opts.model ?? null, (a, isNew) => {
       this.bucket(a.lastSeen).alerts += isNew ? 1 : 0;
       opts.onAlert?.(a, isNew);
     });
+    if (opts.rules !== null) this.engine.setRules(compileRules(opts.rules ?? DEFAULT_RULES).rules);
     this.flows = new FlowTable((f) => {
       this.totals.flows++;
       this.engine.flow(f);
@@ -101,17 +105,28 @@ export class Sensor {
   }
 }
 
-/** Learns what normal flows look like from benign simulated traffic (or a clean capture). */
-export function trainBaseline(opts: { seed?: number; minutes?: number; flows?: Flow[] } = {}): IForestModel {
+/** Learns what normal flows and TLS clients look like from benign simulated traffic (or a clean capture). */
+export function trainBaseline(opts: { seed?: number; minutes?: number; flows?: Flow[]; tlsClients?: string[] } = {}): BaselineModel {
   let flows = opts.flows;
+  const tls = new Set(opts.tlsClients ?? []);
   if (!flows) {
     const sim = new NetworkSimulator(opts.seed ?? 99);
     const start = Date.UTC(2026, 0, 1, 9);
     const packets = sim.benign(start, (opts.minutes ?? 10) * 60_000).sort((a, b) => a.ts - b.ts);
     flows = [];
     const table = new FlowTable((f) => flows!.push(f));
-    for (const p of packets) table.add(p);
+    for (const p of packets) {
+      table.add(p);
+      if (p.tls) tls.add(p.tls.ja4);
+    }
     table.flush();
   }
-  return trainIForest(flows.map(flowVector), { trees: 120, sampleSize: 256, seed: opts.seed ?? 99 });
+  return { ...trainIForest(flows.map(flowVector), { trees: 120, sampleSize: 256, seed: opts.seed ?? 99 }), ...(tls.size ? { tlsClients: [...tls] } : {}) };
+}
+
+/** Fingerprint inventory: every TLS client seen, which hosts use it and what it is. */
+export function tlsInventory(engine: DetectionEngine) {
+  return [...engine.tlsClients.entries()]
+    .map(([ja4, c]) => ({ ja4, hosts: c.hosts.size, hostList: [...c.hosts].slice(0, 12), snis: [...c.snis], connections: c.connections, first: c.first, last: c.last, profile: describeJa4(ja4) ?? null }))
+    .sort((a, b) => a.hosts - b.hosts || b.last - a.last);
 }

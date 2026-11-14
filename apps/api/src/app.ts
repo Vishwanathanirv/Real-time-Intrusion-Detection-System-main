@@ -8,7 +8,7 @@ import rateLimit from "@fastify/rate-limit";
 import fastifyStatic from "@fastify/static";
 import websocket from "@fastify/websocket";
 import { z } from "zod";
-import { ATTACKS, ATTACK_LABELS, DEFAULT_CONFIG, NetworkSimulator, PcapStreamReader, Sensor, trainBaseline, writePcap, type Alert, type DetectorConfig } from "@packeteye/core";
+import { ATTACKS, ATTACK_LABELS, DEFAULT_CONFIG, NetworkSimulator, PcapStreamReader, Sensor, compileRules, tlsInventory, trainBaseline, writePcap, type Alert, type DetectorConfig } from "@packeteye/core";
 import { LiveSensor, type Mode } from "./live";
 import { TelegramNotifier } from "./notify";
 import { AlertStore } from "./store";
@@ -134,6 +134,25 @@ export async function buildApp(opts: AppOptions = {}): Promise<{ app: FastifyIns
     return { config };
   });
 
+  // ---------- detection rules (Suricata syntax) ----------
+  const ruleView = () => {
+    const engine = live.sensor.engine;
+    return { text: live.rulesText, rules: engine.rules.map((r) => ({ sid: r.sid, rev: r.rev, msg: r.msg, proto: r.proto, classtype: r.classtype ?? null, severity: r.severity, mitre: r.mitre?.id ?? null, line: r.line, hits: engine.ruleHits.get(r.sid) ?? 0 })) };
+  };
+  app.get("/api/rules", async () => ruleView());
+  app.put("/api/rules", { bodyLimit: 256 * 1024 }, async (req, reply) => {
+    requireAdmin(req.headers.authorization);
+    const { text } = z.object({ text: z.string().max(200_000) }).parse(req.body);
+    const { rules, errors } = compileRules(text);
+    if (errors.length) return reply.status(400).send({ error: `${errors.length} rule${errors.length > 1 ? "s" : ""} could not be loaded`, errors });
+    live.rulesText = text;
+    live.sensor.engine.setRules(rules);
+    return ruleView();
+  });
+
+  // ---------- TLS client inventory ----------
+  app.get("/api/tls", async () => ({ clients: tlsInventory(live.sensor.engine), commonHosts: config.tls.commonHosts }));
+
   app.get("/api/evaluation", async (_req, reply) => (evaluation ? evaluation : reply.status(404).send({ error: "Run `npm run evaluate` to generate the report." })));
 
   /** Offline analysis of an uploaded capture in an isolated sensor. */
@@ -141,7 +160,7 @@ export async function buildApp(opts: AppOptions = {}): Promise<{ app: FastifyIns
     const file = await req.file();
     if (!file) return reply.status(400).send({ error: "Upload a .pcap file in the 'file' field." });
     const alerts = new Map<string, Alert>();
-    const sensor = new Sensor({ config, model: baseline, onAlert: (a) => alerts.set(a.id, { ...a }) });
+    const sensor = new Sensor({ config, model: baseline, rules: live.rulesText, onAlert: (a) => alerts.set(a.id, { ...a }) });
     let first = Infinity;
     let last = 0;
     let tick = 0;
@@ -173,6 +192,7 @@ export async function buildApp(opts: AppOptions = {}): Promise<{ app: FastifyIns
       topTalkers: s.topTalkers,
       topPorts: s.topPorts,
       alerts: [...alerts.values()].sort((a, b) => a.firstSeen - b.firstSeen),
+      tls: tlsInventory(sensor.engine),
     };
   });
 

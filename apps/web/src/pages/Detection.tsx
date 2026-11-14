@@ -19,6 +19,7 @@ const LABELS: Record<string, { name: string; mitre: string; how: string }> = {
   brute_force: { name: "SSH / RDP brute force", mitre: "T1110.001", how: "Short-lived connections to login services from one source, per target." },
   dns_tunnel: { name: "DNS tunnelling", mitre: "T1071.004", how: "Query volume per domain, uniqueness, Shannon entropy and length of subdomains." },
   beaconing: { name: "C2 beaconing", mitre: "T1071.001", how: "Regular connection intervals to one external endpoint (low coefficient of variation)." },
+  tls_c2: { name: "Implant over TLS", mitre: "T1573", how: "JA4 fingerprint of the TLS ClientHello: a client used by almost no other host, often without ALPN. Timing is randomised, so beacon analysis alone misses it." },
   exfiltration: { name: "Data exfiltration", mitre: "TA0010", how: "Isolation forest trained only on normal flows flags flows that look unlike anything seen before." },
 };
 

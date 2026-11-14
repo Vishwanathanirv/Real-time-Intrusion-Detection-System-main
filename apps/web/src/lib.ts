@@ -38,12 +38,12 @@ export async function api<T>(path: string, init?: RequestInit & { json?: unknown
   if (DEMO) {
     const { demo } = await import("./demo/server");
     const r = await demo.handle(init?.method ?? "GET", path, init?.json);
-    if (r.status >= 400) throw new Error((r.data as { error?: string }).error ?? `Request failed (${r.status})`);
+    if (r.status >= 400) throw Object.assign(new Error((r.data as { error?: string }).error ?? `Request failed (${r.status})`), { details: r.data });
     return r.data as T;
   }
   const res = await fetch(path, { ...init, headers: { ...(init?.json !== undefined ? { "content-type": "application/json" } : {}), ...init?.headers }, body: init?.json !== undefined ? JSON.stringify(init.json) : init?.body });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error((data as { error?: string }).error ?? `Request failed (${res.status})`);
+  if (!res.ok) throw Object.assign(new Error((data as { error?: string }).error ?? `Request failed (${res.status})`), { details: data });
   return data as T;
 }
 

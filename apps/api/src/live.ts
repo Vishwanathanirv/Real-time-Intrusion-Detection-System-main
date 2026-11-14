@@ -1,6 +1,6 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { EventEmitter } from "node:events";
-import { ATTACKS, NetworkSimulator, PcapStreamReader, Sensor, trainBaseline, type Alert, type AttackKind, type DetectorConfig, type LabeledPacket, type Packet } from "@packeteye/core";
+import { ATTACKS, DEFAULT_RULES, NetworkSimulator, PcapStreamReader, Sensor, trainBaseline, type Alert, type AttackKind, type DetectorConfig, type LabeledPacket, type Packet } from "@packeteye/core";
 
 export type Mode = "simulator" | "capture";
 export type LiveState = { mode: Mode; running: boolean; autopilot: boolean; interface?: string; activeAttacks: { id: string; kind: AttackKind; endsAt: number }[] };
@@ -17,6 +17,8 @@ export class LiveSensor extends EventEmitter {
   private timers: NodeJS.Timeout[] = [];
   private tcpdump: ChildProcess | null = null;
   private nextAuto = Date.now() + 20_000;
+  /** The active ruleset, kept here so a sensor reset keeps the operator's rules. */
+  rulesText = DEFAULT_RULES;
 
   constructor(private config: DetectorConfig, opts: { mode?: Mode; iface?: string; autopilot?: boolean } = {}) {
     super();
@@ -26,7 +28,7 @@ export class LiveSensor extends EventEmitter {
   }
 
   private makeSensor() {
-    return new Sensor({ config: this.config, model: trainBaseline({ seed: 99, minutes: 8 }), onAlert: (a: Alert, isNew: boolean) => this.emit("alert", a, isNew) });
+    return new Sensor({ config: this.config, model: trainBaseline({ seed: 99, minutes: 8 }), rules: this.rulesText, onAlert: (a: Alert, isNew: boolean) => this.emit("alert", a, isNew) });
   }
 
   start() {
