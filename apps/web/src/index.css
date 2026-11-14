@@ -1,44 +1,59 @@
 @import "tailwindcss";
 
-/* PacketEye: an amber "radar console" look, distinct from the other projects. */
+/*
+ * PacketEye looks like what it is: a rack-mounted sensor appliance. Brushed aluminium (or black
+ * anodised) faceplates, inset dark screens with amber phosphor readouts, LED lamps for status
+ * and severity, and push buttons. Phosphor colours only ever appear inside a screen.
+ */
 :root {
-  --bg: #0c0a07;
-  --panel: #13100b;
-  --panel-2: #1c1810;
-  --line: #2e2719;
-  --ink: #f3ead9;
-  --muted: #b3a58c;
-  --faint: #7d705a;
-  --accent: #f5a524;
-  --accent-ink: #1a1205;
-  --ok: #9bd982;
-  --ok-soft: rgba(155, 217, 130, 0.12);
-  --warn: #fb923c;
-  --warn-soft: rgba(251, 146, 60, 0.13);
-  --bad: #f05252;
-  --bad-soft: rgba(240, 82, 82, 0.14);
-  --grid: rgba(245, 165, 36, 0.045);
-  color-scheme: dark;
+  --bg: #c4cad0;
+  --panel: #e3e6e9;
+  --panel-2: #d3d8dc;
+  --line: #a9b0b8;
+  --ink: #1b2026;
+  --muted: #4a535d;
+  --faint: #737c86;
+  --accent: #1f5fbf;
+  --accent-ink: #ffffff;
+  --ok: #188a43;
+  --ok-soft: rgba(24, 138, 67, 0.12);
+  --warn: #b26a00;
+  --warn-soft: rgba(178, 106, 0, 0.13);
+  --bad: #c42b2b;
+  --bad-soft: rgba(196, 43, 43, 0.11);
+  --sheen: rgba(255, 255, 255, 0.75);
+  --shade: rgba(0, 0, 0, 0.18);
+  /* Inside the screens. */
+  --screen: #0c1210;
+  --screen-line: rgba(255, 186, 82, 0.13);
+  --phosphor: #ffbb55;
+  --phosphor-dim: #a8763a;
+  --led-green: #2fe07a;
+  --led-amber: #ffb020;
+  --led-red: #ff3b3b;
+  color-scheme: light;
 }
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) {
-    --bg: #f5efe3;
-    --panel: #fffaf0;
-    --panel-2: #efe6d4;
-    --line: #dccfb6;
-    --ink: #1f190f;
-    --muted: #5f523c;
-    --faint: #8f8167;
-    --accent: #b45309;
-    --accent-ink: #fffaf0;
-    --ok: #3f7d2a;
-    --ok-soft: rgba(63, 125, 42, 0.12);
-    --warn: #c2410c;
-    --warn-soft: rgba(194, 65, 12, 0.1);
-    --bad: #b91c1c;
-    --bad-soft: rgba(185, 28, 28, 0.1);
-    --grid: rgba(180, 83, 9, 0.06);
-    color-scheme: light;
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111316;
+    --panel: #22252a;
+    --panel-2: #2a2e34;
+    --line: #3b4048;
+    --ink: #e8ebee;
+    --muted: #a3aab3;
+    --faint: #6e7680;
+    --accent: #6ea2ff;
+    --accent-ink: #0a1430;
+    --ok: #45d483;
+    --ok-soft: rgba(69, 212, 131, 0.13);
+    --warn: #ffb547;
+    --warn-soft: rgba(255, 181, 71, 0.13);
+    --bad: #ff6464;
+    --bad-soft: rgba(255, 100, 100, 0.13);
+    --sheen: rgba(255, 255, 255, 0.06);
+    --shade: rgba(0, 0, 0, 0.5);
+    --screen: #07090a;
+    color-scheme: dark;
   }
 }
 @theme inline {
@@ -57,36 +72,190 @@
   --color-warn-soft: var(--warn-soft);
   --color-bad: var(--bad);
   --color-bad-soft: var(--bad-soft);
-  --font-sans: "Space Grotesk Variable", ui-sans-serif, system-ui, sans-serif;
+  --color-screen: var(--screen);
+  --color-phosphor: var(--phosphor);
+  --font-sans: "Barlow", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Barlow Semi Condensed", "Barlow", ui-sans-serif, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-lcd: "Share Tech Mono", "JetBrains Mono", ui-monospace, monospace;
 }
-html, body, #root { min-height: 100%; color: var(--ink); }
+html,
+body,
+#root {
+  min-height: 100%;
+  color: var(--ink);
+}
 body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   background-color: var(--bg);
-  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-  background-size: 32px 32px;
+  /* Rack rails: faint vertical rows of mounting holes down both edges of the page. */
+  background-image:
+    radial-gradient(circle at 10px 50%, var(--shade) 0 2.5px, transparent 3px),
+    radial-gradient(circle at calc(100% - 10px) 50%, var(--shade) 0 2.5px, transparent 3px);
+  background-size: 100% 28px;
+  background-repeat: repeat-y;
 }
-h1, h2 { letter-spacing: -0.01em; }
+h1,
+h2,
+.display {
+  font-family: var(--font-display);
+}
+
 @layer components {
-  .panel { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 3px; }
-  /* Corner brackets, like a targeting reticle. */
-  .panel::before, .panel::after { content: ""; position: absolute; width: 10px; height: 10px; border-color: var(--accent); pointer-events: none; opacity: 0.7; }
-  .panel::before { top: -1px; left: -1px; border-top: 1px solid; border-left: 1px solid; }
-  .panel::after { bottom: -1px; right: -1px; border-bottom: 1px solid; border-right: 1px solid; }
-  .label { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
-  .btn { display: inline-flex; align-items: center; gap: 0.5rem; height: 2.25rem; padding: 0 0.85rem; border-radius: 3px; font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; border: 1px solid var(--line); background: var(--panel-2); color: var(--ink); cursor: pointer; transition: border-color .15s, color .15s; }
-  .btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
-  .btn:disabled { opacity: .45; cursor: not-allowed; }
-  .btn-accent { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-  .btn-accent:hover:not(:disabled) { color: var(--accent-ink); filter: brightness(1.08); }
-  .field { height: 2.25rem; width: 100%; border-radius: 3px; border: 1px solid var(--line); background: var(--panel-2); color: var(--ink); padding: 0 0.7rem; font-size: 0.875rem; }
-  .field:focus { outline: none; border-color: var(--accent); }
+  /* A faceplate: brushed metal, a highlight along the top edge and a screw in each corner. */
+  .panel {
+    position: relative;
+    border-radius: 5px;
+    border: 1px solid var(--line);
+    background:
+      radial-gradient(circle at 9px 9px, var(--faint) 0 2px, var(--shade) 2.5px, transparent 3.2px),
+      radial-gradient(circle at calc(100% - 9px) 9px, var(--faint) 0 2px, var(--shade) 2.5px, transparent 3.2px),
+      radial-gradient(circle at 9px calc(100% - 9px), var(--faint) 0 2px, var(--shade) 2.5px, transparent 3.2px),
+      radial-gradient(circle at calc(100% - 9px) calc(100% - 9px), var(--faint) 0 2px, var(--shade) 2.5px, transparent 3.2px),
+      repeating-linear-gradient(90deg, transparent 0 2px, rgba(255, 255, 255, 0.03) 2px 3px),
+      linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+    box-shadow:
+      inset 0 1px 0 var(--sheen),
+      0 1px 0 var(--sheen),
+      0 6px 14px -10px var(--shade);
+  }
+  /* Silkscreen: the printed text on a faceplate. */
+  .label,
+  .silk {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 12.5px;
+    letter-spacing: 0.03em;
+    color: var(--muted);
+  }
+  /* An inset screen with amber phosphor and faint scanlines. */
+  .screen {
+    position: relative;
+    border-radius: 4px;
+    background:
+      repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 3px),
+      var(--screen);
+    color: var(--phosphor);
+    box-shadow:
+      inset 0 2px 6px rgba(0, 0, 0, 0.85),
+      0 1px 0 var(--sheen);
+    border: 1px solid #000;
+  }
+  .lcd {
+    font-family: var(--font-lcd);
+    color: var(--phosphor);
+    text-shadow: 0 0 6px color-mix(in oklab, var(--phosphor) 55%, transparent);
+    letter-spacing: 0.02em;
+  }
+  /* A physical push button. */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 2.25rem;
+    padding: 0 0.9rem;
+    border-radius: 4px;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 0.92rem;
+    letter-spacing: 0.02em;
+    border: 1px solid var(--line);
+    background: linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+    color: var(--ink);
+    box-shadow:
+      inset 0 1px 0 var(--sheen),
+      0 2px 0 var(--shade);
+    cursor: pointer;
+    transition: transform 0.06s, box-shadow 0.06s;
+  }
+  .btn:hover:not(:disabled) {
+    border-color: var(--muted);
+  }
+  .btn:active:not(:disabled),
+  .btn[aria-pressed="true"] {
+    transform: translateY(1px);
+    box-shadow:
+      inset 0 2px 4px var(--shade),
+      0 1px 0 var(--sheen);
+  }
+  .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .btn-accent {
+    background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 88%, white) 0%, var(--accent) 100%);
+    border-color: color-mix(in oklab, var(--accent) 70%, black);
+    color: var(--accent-ink);
+  }
+  .field {
+    height: 2.25rem;
+    width: 100%;
+    border-radius: 4px;
+    border: 1px solid #000;
+    background: var(--screen);
+    color: var(--phosphor);
+    font-family: var(--font-lcd);
+    padding: 0 0.7rem;
+    font-size: 0.95rem;
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.8);
+  }
+  .field:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+  /* A status lamp. */
+  .led {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 999px;
+    background: var(--c, var(--faint));
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.45),
+      0 0 7px var(--c, transparent);
+  }
+  .led-off {
+    background: color-mix(in oklab, var(--c, var(--faint)) 25%, #222);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45);
+  }
 }
-:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
-@keyframes flash { from { background: color-mix(in oklab, var(--accent) 18%, transparent); } to { background: transparent; } }
-.row-new { animation: flash 1.4s ease-out; }
-@keyframes sweep { to { transform: rotate(360deg); } }
-.radar { animation: sweep 3.2s linear infinite; transform-origin: 50% 50%; }
-@media (prefers-reduced-motion: reduce) { .row-new, .radar { animation: none; } }
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+@keyframes flash {
+  from {
+    background: color-mix(in oklab, var(--accent) 16%, transparent);
+  }
+  to {
+    background: transparent;
+  }
+}
+.row-new {
+  animation: flash 1.4s ease-out;
+}
+@keyframes blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+.blink {
+  animation: blink 1.1s steps(2, start) infinite;
+}
+@keyframes sweep {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.radar {
+  animation: sweep 3.2s linear infinite;
+  transform-origin: 50% 50%;
+}
+@media (prefers-reduced-motion: reduce) {
+  .row-new,
+  .radar,
+  .blink {
+    animation: none;
+  }
+}

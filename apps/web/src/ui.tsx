@@ -1,25 +1,30 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { ago, api, clock, type Alert, type Severity } from "./lib";
 
-const SEV: Record<Severity, string> = {
-  low: "bg-panel-2 text-muted",
-  medium: "bg-warn-soft text-warn",
-  high: "bg-bad-soft text-bad",
-  critical: "bg-bad text-bg",
-};
+/** Lamp colour per severity: the LEDs on the front of the box. */
+const LAMP: Record<Severity, string> = { low: "var(--led-green)", medium: "var(--led-amber)", high: "var(--led-red)", critical: "var(--led-red)" };
 
 export function SevBadge({ s }: { s: Severity }) {
-  return <span className={`inline-flex rounded-sm px-2 py-0.5 font-mono text-[10.5px] font-semibold uppercase tracking-wider ${SEV[s]}`}>{s}</span>;
+  return (
+    <span className="inline-flex items-center gap-2 font-display text-[13px] font-semibold capitalize" style={{ color: s === "low" ? "var(--muted)" : s === "medium" ? "var(--warn)" : "var(--bad)" }}>
+      <span className={`led ${s === "critical" ? "blink" : ""}`} style={{ ["--c" as string]: LAMP[s] }} aria-hidden />
+      {s}
+    </span>
+  );
 }
 
+/** A readout: a small inset screen with the figure in phosphor, and its name printed beneath. */
 export function Kpi({ label, value, sub, tone }: { label: string; value: ReactNode; sub?: ReactNode; tone?: string }) {
+  const alarm = tone === "bad";
   return (
-    <div className="panel p-4">
-      <div className="label">{label}</div>
-      <div className="mt-2 font-mono text-2xl font-medium tabular-nums tracking-tight" style={{ color: tone ? `var(--${tone})` : undefined }}>
-        {value}
+    <div className="panel px-3 pb-3 pt-4">
+      <div className="screen px-3 py-2.5">
+        <div className="lcd whitespace-nowrap text-[clamp(1.2rem,1.9vw,1.7rem)] leading-none tabular-nums" style={alarm ? { color: "var(--led-red)", textShadow: "0 0 8px rgba(255,59,59,.6)" } : undefined}>
+          {value}
+        </div>
       </div>
-      {sub && <div className="mt-1 text-xs text-faint">{sub}</div>}
+      <div className="silk mt-2 px-0.5 text-ink">{label}</div>
+      {sub && <div className="mt-0.5 px-0.5 text-xs text-faint">{sub}</div>}
     </div>
   );
 }
@@ -28,8 +33,8 @@ export function Panel({ title, action, children, className = "" }: { title?: Rea
   return (
     <section className={`panel ${className}`}>
       {(title || action) && (
-        <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
-          <h2 className="font-mono text-[11.5px] uppercase tracking-[0.12em] text-muted">{title}</h2>
+        <div className="flex items-center justify-between gap-3 px-5 pb-2 pt-3.5">
+          <h2 className="font-display text-[1.02rem] font-semibold tracking-[0.01em] [text-shadow:0_1px_0_var(--sheen)]">{title}</h2>
           {action}
         </div>
       )}
@@ -38,42 +43,52 @@ export function Panel({ title, action, children, className = "" }: { title?: Rea
   );
 }
 
-/** Packets per second over the last two minutes, with red ticks where alerts fired. */
+/** Packets per second over the last two minutes, traced on a scope screen, with red marks where alerts fired. */
 export function TrafficChart({ series }: { series: { t: number; packets: number; alerts: number }[] }) {
   const W = 600;
   const H = 140;
   const max = Math.max(10, ...series.map((s) => s.packets));
   const x = (i: number) => (i / Math.max(1, series.length - 1)) * W;
-  const y = (v: number) => H - 4 - (v / max) * (H - 14);
+  const y = (v: number) => H - 6 - (v / max) * (H - 18);
   const d = series.map((s, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(s.packets).toFixed(1)}`).join(" ");
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="h-36 w-full" role="img" aria-label="Packets per second">
-      {[0.25, 0.5, 0.75].map((g) => (
-        <line key={g} x1={0} x2={W} y1={y(max * g)} y2={y(max * g)} stroke="var(--line)" vectorEffect="non-scaling-stroke" />
-      ))}
-      <path d={`${d} L${W},${H} L0,${H} Z`} fill="var(--accent)" opacity={0.08} />
-      <path d={d} fill="none" stroke="var(--accent)" strokeWidth={1.8} vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
-      {series.map((s, i) => (s.alerts ? <line key={s.t} x1={x(i)} x2={x(i)} y1={0} y2={H} stroke="var(--bad)" strokeWidth={2} opacity={0.7} vectorEffect="non-scaling-stroke" /> : null))}
-      <text x={4} y={12} fontSize={10} fill="var(--faint)">
-        {Math.round(max).toLocaleString()} pkt/s
-      </text>
-    </svg>
+    <div className="screen mx-4 mb-4 overflow-hidden">
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="block h-40 w-full" role="img" aria-label="Packets per second">
+        {Array.from({ length: 11 }, (_, i) => (
+          <line key={`v${i}`} x1={(i / 10) * W} x2={(i / 10) * W} y1={0} y2={H} stroke="var(--screen-line)" vectorEffect="non-scaling-stroke" />
+        ))}
+        {[0.25, 0.5, 0.75].map((g) => (
+          <line key={g} x1={0} x2={W} y1={y(max * g)} y2={y(max * g)} stroke="var(--screen-line)" vectorEffect="non-scaling-stroke" />
+        ))}
+        {series.map((s, i) => (s.alerts ? <line key={s.t} x1={x(i)} x2={x(i)} y1={0} y2={H} stroke="var(--led-red)" strokeWidth={2} opacity={0.75} vectorEffect="non-scaling-stroke" /> : null))}
+        <path d={d} fill="none" stroke="var(--phosphor)" strokeOpacity={0.35} strokeWidth={6} vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+        <path d={d} fill="none" stroke="var(--phosphor)" strokeWidth={1.6} vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+      </svg>
+      <span className="lcd pointer-events-none absolute left-2.5 top-1.5 text-[11px] opacity-80">{Math.round(max).toLocaleString()} pkt/s</span>
+    </div>
   );
 }
 
+/** A segmented meter per row, like the level bars on a hardware display. */
 export function Bars({ rows }: { rows: { label: ReactNode; value: number; hint?: string }[] }) {
   const max = Math.max(1, ...rows.map((r) => r.value));
+  const SEG = 16;
   return (
-    <div className="space-y-2.5">
-      {rows.map((r, i) => (
-        <div key={i} className="grid grid-cols-[minmax(0,9rem)_1fr_4.5rem] items-center gap-3 text-sm">
-          <span className="truncate font-mono text-xs">{r.label}</span>
-          <div className="h-1.5 overflow-hidden rounded-full bg-panel-2">
-            <div className="h-full rounded-full bg-accent" style={{ width: `${(r.value / max) * 100}%` }} />
+    <div className="screen space-y-2 px-3 py-3">
+      {rows.map((r, i) => {
+        const lit = Math.max(1, Math.round((r.value / max) * SEG));
+        return (
+          <div key={i} className="grid grid-cols-[minmax(0,8.5rem)_1fr_4.5rem] items-center gap-3">
+            <span className="lcd truncate text-[13px]">{r.label}</span>
+            <div className="flex gap-[2px]" aria-hidden>
+              {Array.from({ length: SEG }, (_, k) => (
+                <span key={k} className="h-2.5 flex-1 rounded-[1px]" style={{ background: k < lit ? "var(--phosphor)" : "rgba(255,187,85,.1)", boxShadow: k < lit ? "0 0 4px rgba(255,187,85,.45)" : undefined }} />
+              ))}
+            </div>
+            <span className="lcd text-right text-[12px] opacity-75">{r.hint}</span>
           </div>
-          <span className="text-right font-mono text-xs text-faint">{r.hint}</span>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -81,12 +96,12 @@ export function Bars({ rows }: { rows: { label: ReactNode; value: number; hint?:
 export function AlertRow({ a, fresh, onOpen, absolute }: { a: Alert; fresh?: boolean; onOpen: (a: Alert) => void; absolute?: boolean }) {
   return (
     <li>
-      <button onClick={() => onOpen(a)} className={`grid w-full grid-cols-[4.5rem_1fr_auto] items-center gap-3 border-t border-line px-4 py-3 text-left hover:bg-panel-2 ${fresh ? "row-new" : ""}`}>
+      <button onClick={() => onOpen(a)} className={`grid w-full grid-cols-[5.5rem_1fr_auto] items-center gap-3 border-t border-line px-5 py-3 text-left hover:bg-panel-2 ${fresh ? "row-new" : ""}`}>
         <SevBadge s={a.severity} />
         <span className="min-w-0">
           <span className="block truncate text-sm">{a.title}</span>
           <span className="mt-0.5 block truncate text-xs text-faint">
-            <span className="font-mono">{a.mitre.id}</span> · {a.mitre.tactic} · {a.src} → {a.dst}
+            <span className="font-mono">{a.mitre.id}</span> {a.mitre.tactic}, {a.src} → {a.dst}
           </span>
         </span>
         <span className="text-right text-xs text-faint">

@@ -45,7 +45,7 @@ export function TlsTable({ clients, common }: { clients: TlsClient[]; common: nu
                 </td>
                 <td className="px-2 py-3">
                   {c.profile ?? <span className="text-muted">unknown client</span>}
-                  {rare && <span className="ml-2 rounded-sm bg-bad-soft px-1.5 py-0.5 font-mono text-[10.5px] uppercase text-bad">rare</span>}
+                  {rare && <span className="ml-2 inline-flex items-center gap-1.5 font-display text-[12.5px] font-semibold text-bad"><span className="led blink" style={{ ["--c" as string]: "var(--led-red)" }} aria-hidden />rare</span>}
                 </td>
                 <td className="px-2 py-3 text-right font-mono" title={c.hostList.join(", ")}>
                   {c.hosts}
@@ -68,15 +68,15 @@ export function Tls() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-[1.7rem] font-bold tracking-tight">TLS clients</h1>
-        <p className="mt-1 max-w-3xl text-sm text-muted">
+        <h1 className="text-[2.3rem] font-bold leading-none tracking-tight">TLS clients</h1>
+        <p className="mt-2 max-w-3xl text-[0.95rem] text-muted">
           Encryption hides what a program says, but not how it says hello. Every TLS connection starts with a ClientHello whose cipher suites, extensions and signature algorithms are chosen by the software, not the user. PacketEye turns each one
           into a JA4 fingerprint. Browsers and system services are shared by many machines; a fingerprint used by one machine only is worth a look.
         </p>
       </div>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label="Distinct clients" value={clients.length} />
-        <Kpi label="Rare clients" value={rare.length} sub={`used by fewer than ${data?.commonHosts ?? 3} hosts`} tone={rare.length ? "bad" : "ok"} />
+        <Kpi label="Rare clients" value={rare.length} sub={rare.length ? `used by fewer than ${data?.commonHosts ?? 3} hosts` : "none right now. Launch “Implant over TLS” on Overview to see one appear"} tone={rare.length ? "bad" : "ok"} />
         <Kpi label="TLS connections" value={clients.reduce((a, c) => a + c.connections, 0).toLocaleString("en-IN")} />
         <Kpi label="Without ALPN" value={clients.filter((c) => c.ja4.slice(8, 10) === "00").length} sub="browsers always send one" />
       </div>

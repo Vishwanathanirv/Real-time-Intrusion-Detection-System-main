@@ -75,6 +75,8 @@ Repeated hits are grouped into one alert with a running count, so a 5,000-packet
 
 ## Dashboard
 
+The dashboard is designed to look like what PacketEye is: a rack-mounted sensor appliance. Brushed aluminium faceplates (black anodised in dark mode) with screws in the corners, inset screens with amber phosphor readouts and a scope trace for traffic, segmented level meters, LED lamps for severity and status, and push buttons that light up for the section you're in and for each attack you launch.
+
 - **Overview:**
   - live packets per second, bandwidth, active flows and open alerts
   - a two-minute traffic chart with alert markers
@@ -145,7 +147,8 @@ npm run evaluate                  # SEED=21 MINUTES=45 npm run evaluate
 
 ```bash
 npm run lint && npm run typecheck
-npm test     # 27 tests
+npm test         # 47 tests
+npm run test:e2e # browser tests on the demo build: every section, a launched attack end to end, the sample pcap, rule validation
 ```
 
 The tests cover:

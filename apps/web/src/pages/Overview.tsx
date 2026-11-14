@@ -29,14 +29,14 @@ export function Overview() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-[1.7rem] font-bold tracking-tight">Network overview</h1>
-          <p className="mt-1 text-sm text-muted">
+          <h1 className="text-[2.3rem] font-bold leading-none tracking-tight">Network overview</h1>
+          <p className="mt-2 text-[0.95rem] text-muted">
             {stats?.state.mode === "capture" ? "Live capture from a network interface." : "Simulated office network: 24 workstations, a web, file, database and DNS server."}
           </p>
         </div>
-        <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs ${connected ? "bg-ok-soft text-ok" : "bg-panel-2 text-muted"}`}>
-          <span className={`h-1.5 w-1.5 rounded-full ${connected ? "animate-pulse bg-ok" : "bg-faint"}`} />
-          {connected ? "Sensor online" : "Connecting…"}
+        <span className="silk inline-flex items-center gap-2 text-sm" aria-live="polite">
+          <span className={`led ${connected ? "" : "led-off"}`} style={{ ["--c" as string]: "var(--led-green)" }} aria-hidden />
+          {connected ? "Sensor online" : "Connecting to the sensor…"}
         </span>
       </div>
 
@@ -49,13 +49,24 @@ export function Overview() {
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr]">
-        <Panel title="Traffic, last 2 minutes" action={<span className="flex items-center gap-1.5 text-xs text-muted"><span className="h-2.5 w-0.5 bg-bad" /> alert fired</span>}>
-          <div className="px-4 py-3">{stats ? <TrafficChart series={stats.series} /> : <div className="h-36" />}</div>
+        <Panel title="Traffic, last 2 minutes" action={<span className="silk flex items-center gap-1.5"><span className="h-3 w-0.5 bg-[var(--led-red)]" /> alert fired</span>}>
+          {stats ? <TrafficChart series={stats.series} /> : <div className="screen mx-4 mb-4 h-40" />}
         </Panel>
         <Panel title="Simulate an attack" action={<span className="text-xs text-muted">{stats?.state.activeAttacks.length ? `${stats.state.activeAttacks.length} running` : stats?.state.autopilot ? "autopilot on" : ""}</span>}>
           <div className="grid grid-cols-2 gap-2 p-4">
             {(attackList?.attacks ?? []).map((a) => (
-              <button key={a.kind} className="btn justify-start" disabled={stats?.state.mode !== "simulator"} onClick={() => launch(a.kind, a.label)}>
+              <button
+                key={a.kind}
+                className="btn justify-start"
+                aria-pressed={Boolean(stats?.state.activeAttacks.some((x) => x.kind === a.kind))}
+                disabled={stats?.state.mode !== "simulator"}
+                onClick={() => launch(a.kind, a.label)}
+              >
+                <span
+                  className={`led ${stats?.state.activeAttacks.some((x) => x.kind === a.kind) ? "blink" : "led-off"}`}
+                  style={{ ["--c" as string]: "var(--led-red)" }}
+                  aria-hidden
+                />
                 {a.label}
               </button>
             ))}
@@ -78,12 +89,12 @@ export function Overview() {
         </Panel>
         <div className="space-y-5">
           <Panel title="Top talkers">
-            <div className="p-4">
+            <div className="px-4 pb-4">
               <Bars rows={(stats?.topTalkers ?? []).slice(0, 6).map((t) => ({ label: t.ip, value: t.bytes, hint: bytes(t.bytes) }))} />
             </div>
           </Panel>
           <Panel title="Protocols and ports">
-            <div className="space-y-4 p-4">
+            <div className="space-y-4 px-4 pb-4">
               <div className="flex h-2.5 overflow-hidden rounded-full bg-panel-2">
                 {stats &&
                   (["tcp", "udp", "icmp"] as const).map((p, i) => (

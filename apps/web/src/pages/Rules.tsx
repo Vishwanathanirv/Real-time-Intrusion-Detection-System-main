@@ -42,8 +42,8 @@ export function Rules() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-[1.7rem] font-bold tracking-tight">Detection rules</h1>
-        <p className="mt-1 max-w-3xl text-sm text-muted">
+        <h1 className="text-[2.3rem] font-bold leading-none tracking-tight">Detection rules</h1>
+        <p className="mt-2 max-w-3xl text-[0.95rem] text-muted">
           Signatures in Suricata syntax run beside the behavioural detectors, so a SOC can add its own detections in a language it already knows. Match on addresses, ports and TCP flags, and on DNS names, TLS server names and JA4 fingerprints with{" "}
           <code className="font-mono text-xs">dns.query</code>, <code className="font-mono text-xs">tls.sni</code> and <code className="font-mono text-xs">ja4.hash</code>. Thresholds work the same way as in Suricata.
         </p>
@@ -62,12 +62,12 @@ export function Rules() {
             </div>
           }
         >
-          <div className="flex max-h-[34rem] overflow-auto">
-            <pre aria-hidden className="select-none border-r border-line px-3 py-3 text-right font-mono text-[11.5px] leading-[1.6] text-faint">
+          <div className="screen mx-4 mb-4 flex max-h-[34rem] overflow-auto">
+            <pre aria-hidden className="select-none border-r border-[var(--screen-line)] px-3 py-3 text-right font-mono text-[11.5px] leading-[1.6] text-[var(--phosphor-dim)]">
               {Array.from({ length: lines }, (_, i) => {
                 const bad = errors.some((e) => e.line === i + 1);
                 return (
-                  <div key={i} className={bad ? "text-bad" : ""}>
+                  <div key={i} className={bad ? "text-[var(--led-red)]" : ""}>
                     {i + 1}
                   </div>
                 );
@@ -77,7 +77,7 @@ export function Rules() {
               aria-label="Rules"
               spellCheck={false}
               wrap="off"
-              className="min-h-[24rem] flex-1 resize-none bg-transparent px-3 py-3 font-mono text-[11.5px] leading-[1.6] outline-none"
+              className="min-h-[24rem] min-w-0 flex-1 resize-none bg-transparent px-3 py-3 font-mono text-[11.5px] leading-[1.6] text-[var(--phosphor)] caret-[var(--phosphor)] outline-none"
               style={{ height: `${Math.max(24, lines * 1.6 + 2)}em` }}
               value={text ?? ""}
               onChange={(e) => setText(e.target.value)}

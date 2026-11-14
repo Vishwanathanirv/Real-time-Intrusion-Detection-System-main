@@ -21,6 +21,10 @@ jobs:
         env:
           NODE_OPTIONS: --disable-warning=ExperimentalWarning
       - run: npm run build
+      - name: End-to-end tests on the demo build
+        run: |
+          npx playwright install --with-deps chromium
+          npm run test:e2e
 
   docker:
     runs-on: ubuntu-latest

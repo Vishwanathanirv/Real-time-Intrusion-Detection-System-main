@@ -13,8 +13,8 @@ export function Alerts() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-[1.7rem] font-bold tracking-tight">Alerts</h1>
-        <p className="mt-1 text-sm text-muted">Repeated detections are grouped into one alert with a count, so the queue stays readable during an attack.</p>
+        <h1 className="text-[2.3rem] font-bold leading-none tracking-tight">Alerts</h1>
+        <p className="mt-2 text-[0.95rem] text-muted">Repeated detections are grouped into one alert with a count, so the queue stays readable during an attack.</p>
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <div className="inline-flex rounded-sm border border-line bg-panel p-1" role="tablist">
