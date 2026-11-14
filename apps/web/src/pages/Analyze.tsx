@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { bytes, num, type Alert } from "../lib";
+import { bytes, DEMO, num, type Alert } from "../lib";
 import { AlertDrawer, AlertRow, Bars, Kpi, Panel } from "../ui";
 
 type Result = {
@@ -26,9 +26,14 @@ export function Analyze() {
     setBusy(true);
     setError(null);
     setResult(null);
-    const fd = new FormData();
-    fd.append("file", file);
     try {
+      if (DEMO) {
+        const { demo } = await import("../demo/server");
+        setResult(await demo.analyze(file));
+        return;
+      }
+      const fd = new FormData();
+      fd.append("file", file);
       const res = await fetch("/api/pcap", { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Upload failed");
@@ -40,16 +45,29 @@ export function Analyze() {
     }
   }
 
+  async function sampleBlob() {
+    if (DEMO) return (await import("../demo/server")).demo.samplePcap();
+    return (await fetch("/api/pcap/sample")).blob();
+  }
+
   async function trySample() {
-    const blob = await (await fetch("/api/pcap/sample")).blob();
-    await upload(new File([blob], "packeteye-sample.pcap"));
+    await upload(new File([await sampleBlob()], "packeteye-sample.pcap"));
+  }
+
+  async function downloadSample() {
+    const url = URL.createObjectURL(await sampleBlob());
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "packeteye-sample.pcap";
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   return (
     <div className="space-y-5">
       <div>
         <h1 className="text-[1.7rem] font-bold tracking-tight">Analyse a capture</h1>
-        <p className="mt-1 max-w-2xl text-sm text-muted">Upload a .pcap from Wireshark or tcpdump (up to 50 MB). It runs through the same detectors in an isolated sensor and nothing is stored.</p>
+        <p className="mt-1 max-w-2xl text-sm text-muted">Upload a .pcap from Wireshark or tcpdump (up to 50 MB). {DEMO ? "It is analysed right here in your browser by the same detectors; the file never leaves your machine." : "It runs through the same detectors in an isolated sensor and nothing is stored."}</p>
       </div>
       <label
         onDragOver={(e) => {
@@ -72,9 +90,9 @@ export function Analyze() {
         <button className="btn" onClick={trySample} disabled={busy}>
           Analyse the sample capture
         </button>
-        <a className="btn" href="/api/pcap/sample">
+        <button className="btn" onClick={downloadSample} disabled={busy}>
           Download sample .pcap
-        </a>
+        </button>
       </div>
       {error && <p className="rounded-sm bg-bad-soft px-3 py-2 text-sm text-bad">{error}</p>}
       {result && (

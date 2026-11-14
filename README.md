@@ -129,6 +129,10 @@ npm run evaluate                  # SEED=21 MINUTES=45 npm run evaluate
 | `GET` | `/api/stats`, `/api/evaluation`, `/api/config` | Traffic stats, coverage report and detector thresholds |
 | `POST` | `/api/attacks`, `PUT /api/live`, `PUT /api/config` | Simulation and tuning. Protected by `ADMIN_TOKEN` when set. |
 
+## Live demo on Vercel
+
+`npm run build:demo` builds the dashboard with the sensor compiled into the browser: the simulated office network, flow table, all seven detectors and the isolation forest run client-side, and uploaded captures are analysed locally without leaving the machine. Import the repo on [Vercel](https://vercel.com/new) and it picks up `vercel.json`; no settings or environment variables are needed. Live capture from a real interface and Telegram alerts need the full server (`npm start` or Docker).
+
 ## Tests
 
 ```bash

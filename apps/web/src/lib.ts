@@ -31,7 +31,16 @@ export type Stats = {
   state: { mode: string; running: boolean; autopilot: boolean; activeAttacks: { id: string; kind: string; endsAt: number }[] };
 };
 
+/** True in the hosted demo build, where the sensor runs inside the browser instead of on a server. */
+export const DEMO = import.meta.env.VITE_DEMO === "1";
+
 export async function api<T>(path: string, init?: RequestInit & { json?: unknown }): Promise<T> {
+  if (DEMO) {
+    const { demo } = await import("./demo/server");
+    const r = await demo.handle(init?.method ?? "GET", path, init?.json);
+    if (r.status >= 400) throw new Error((r.data as { error?: string }).error ?? `Request failed (${r.status})`);
+    return r.data as T;
+  }
   const res = await fetch(path, { ...init, headers: { ...(init?.json !== undefined ? { "content-type": "application/json" } : {}), ...init?.headers }, body: init?.json !== undefined ? JSON.stringify(init.json) : init?.body });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error((data as { error?: string }).error ?? `Request failed (${res.status})`);
@@ -50,6 +59,37 @@ export function useLive() {
     let stop = false;
     let retry: ReturnType<typeof setTimeout>;
     api<{ alerts: Alert[] }>("/api/alerts?limit=30").then((r) => setAlerts(r.alerts)).catch(() => {});
+    const onMessage = (m: { type: string; data: unknown }) => {
+      if (m.type === "stats") setStats(m.data as Stats);
+      if (m.type === "hello") {
+        const d = m.data as { state: Stats["state"]; stats: Omit<Stats, "state"> };
+        setStats({ ...d.stats, state: d.state });
+      }
+      if (m.type === "alert" || m.type === "alert-update") {
+        const a = m.data as Alert;
+        if (m.type === "alert") {
+          fresh.current.add(a.id);
+          setTimeout(() => fresh.current.delete(a.id), 2500);
+        }
+        setAlerts((prev) => [a, ...prev.filter((p) => p.id !== a.id)].sort((x, y) => y.lastSeen - x.lastSeen).slice(0, 30));
+      }
+    };
+    if (DEMO) {
+      let unsub: (() => void) | null = null;
+      void import("./demo/server")
+        .then(({ demo }) => demo.subscribe(onMessage))
+        .then((u) => {
+          if (stop) u();
+          else {
+            unsub = u;
+            setConnected(true);
+          }
+        });
+      return () => {
+        stop = true;
+        unsub?.();
+      };
+    }
     const connect = () => {
       ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/api/ws`);
       ws.onopen = () => setConnected(true);
@@ -57,22 +97,7 @@ export function useLive() {
         setConnected(false);
         if (!stop) retry = setTimeout(connect, 2000);
       };
-      ws.onmessage = (e) => {
-        const m = JSON.parse(e.data) as { type: string; data: unknown };
-        if (m.type === "stats") setStats(m.data as Stats);
-        if (m.type === "hello") {
-          const d = m.data as { state: Stats["state"]; stats: Omit<Stats, "state"> };
-          setStats({ ...d.stats, state: d.state });
-        }
-        if (m.type === "alert" || m.type === "alert-update") {
-          const a = m.data as Alert;
-          if (m.type === "alert") {
-            fresh.current.add(a.id);
-            setTimeout(() => fresh.current.delete(a.id), 2500);
-          }
-          setAlerts((prev) => [a, ...prev.filter((p) => p.id !== a.id)].sort((x, y) => y.lastSeen - x.lastSeen).slice(0, 30));
-        }
-      };
+      ws.onmessage = (e) => onMessage(JSON.parse(e.data));
     };
     connect();
     return () => {

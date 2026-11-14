@@ -54,7 +54,7 @@ export class Sensor {
   }
 
   ingest(p: Packet): void {
-    const t0 = process.hrtime.bigint();
+    const t0 = performance.now();
     this.totals.packets++;
     this.totals.bytes += p.len;
     this.protocols[p.proto]++;
@@ -68,7 +68,7 @@ export class Sensor {
     b.bytes += p.len;
     this.flows.add(p);
     this.engine.packet(p);
-    this.processingNs += Number(process.hrtime.bigint() - t0);
+    this.processingNs += (performance.now() - t0) * 1e6;
   }
 
   tick(now: number): void {

@@ -21,7 +21,8 @@
     "sample-pcap": "tsx scripts/sample-pcap.ts",
     "test": "vitest run",
     "typecheck": "tsc -p packages/core && tsc -p apps/api && tsc -p apps/web",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "build:demo": "npm run build:demo -w apps/web"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
