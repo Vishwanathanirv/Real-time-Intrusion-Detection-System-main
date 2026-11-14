@@ -9,14 +9,14 @@ const SEV: Record<Severity, string> = {
 };
 
 export function SevBadge({ s }: { s: Severity }) {
-  return <span className={`inline-flex rounded-md px-2 py-0.5 font-mono text-[10.5px] font-semibold uppercase tracking-wider ${SEV[s]}`}>{s}</span>;
+  return <span className={`inline-flex rounded-sm px-2 py-0.5 font-mono text-[10.5px] font-semibold uppercase tracking-wider ${SEV[s]}`}>{s}</span>;
 }
 
 export function Kpi({ label, value, sub, tone }: { label: string; value: ReactNode; sub?: ReactNode; tone?: string }) {
   return (
     <div className="panel p-4">
       <div className="label">{label}</div>
-      <div className="mt-2 text-2xl font-semibold tabular-nums tracking-tight" style={{ color: tone ? `var(--${tone})` : undefined }}>
+      <div className="mt-2 font-mono text-2xl font-medium tabular-nums tracking-tight" style={{ color: tone ? `var(--${tone})` : undefined }}>
         {value}
       </div>
       {sub && <div className="mt-1 text-xs text-faint">{sub}</div>}
@@ -29,7 +29,7 @@ export function Panel({ title, action, children, className = "" }: { title?: Rea
     <section className={`panel ${className}`}>
       {(title || action) && (
         <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
-          <h2 className="text-sm font-medium">{title}</h2>
+          <h2 className="font-mono text-[11.5px] uppercase tracking-[0.12em] text-muted">{title}</h2>
           {action}
         </div>
       )}
@@ -143,7 +143,7 @@ export function AlertDrawer({ alert, onClose, onChange }: { alert: Alert; onClos
           </button>
         </div>
 
-        <div className="mt-6 rounded-xl border border-line p-4">
+        <div className="mt-6 rounded-sm border border-line p-4">
           <div className="label">MITRE ATT&amp;CK</div>
           <a className="mt-2 block text-sm hover:underline" href={`https://attack.mitre.org/techniques/${a.mitre.id.replace(".", "/")}/`} target="_blank" rel="noreferrer">
             <span className="font-mono text-accent">{a.mitre.id}</span> {a.mitre.name}
@@ -158,7 +158,7 @@ export function AlertDrawer({ alert, onClose, onChange }: { alert: Alert; onClos
             ["First seen", clock(a.firstSeen)],
             ["Last seen", `${clock(a.lastSeen)} (${a.count}×)`],
           ].map(([k, v]) => (
-            <div key={k} className="rounded-xl bg-panel-2 p-3">
+            <div key={k} className="rounded-sm bg-panel-2 p-3">
               <dt className="label">{k}</dt>
               <dd className="mt-1 break-all font-mono text-xs">{v}</dd>
             </div>
@@ -184,7 +184,7 @@ export function AlertDrawer({ alert, onClose, onChange }: { alert: Alert; onClos
           ))}
         </ol>
 
-        <div className="mt-6 rounded-xl border border-line p-4">
+        <div className="mt-6 rounded-sm border border-line p-4">
           <div className="flex items-center justify-between">
             <span className="label">Triage</span>
             <span className="text-xs capitalize text-muted">Status: {a.status ?? "open"}</span>

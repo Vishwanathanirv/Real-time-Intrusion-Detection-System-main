@@ -29,7 +29,7 @@ export function Overview() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Network overview</h1>
+          <h1 className="text-[1.7rem] font-bold tracking-tight">Network overview</h1>
           <p className="mt-1 text-sm text-muted">
             {stats?.state.mode === "capture" ? "Live capture from a network interface." : "Simulated office network: 24 workstations, a web, file, database and DNS server."}
           </p>
@@ -87,14 +87,14 @@ export function Overview() {
               <div className="flex h-2.5 overflow-hidden rounded-full bg-panel-2">
                 {stats &&
                   (["tcp", "udp", "icmp"] as const).map((p, i) => (
-                    <div key={p} style={{ width: `${(stats.protocols[p] / totalProto) * 100}%`, background: ["var(--accent)", "var(--warn)", "var(--ok)"][i] }} />
+                    <div key={p} style={{ width: `${(stats.protocols[p] / totalProto) * 100}%`, background: ["var(--accent)", "var(--muted)", "var(--ok)"][i] }} />
                   ))}
               </div>
               <div className="flex gap-4 text-xs text-muted">
                 {stats &&
                   (["tcp", "udp", "icmp"] as const).map((p, i) => (
                     <span key={p} className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-sm" style={{ background: ["var(--accent)", "var(--warn)", "var(--ok)"][i] }} />
+                      <span className="h-2 w-2 rounded-sm" style={{ background: ["var(--accent)", "var(--muted)", "var(--ok)"][i] }} />
                       {p.toUpperCase()} {Math.round((stats.protocols[p] / totalProto) * 100)}%
                     </span>
                   ))}

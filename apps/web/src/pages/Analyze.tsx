@@ -48,7 +48,7 @@ export function Analyze() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Analyse a capture</h1>
+        <h1 className="text-[1.7rem] font-bold tracking-tight">Analyse a capture</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">Upload a .pcap from Wireshark or tcpdump (up to 50 MB). It runs through the same detectors in an isolated sensor and nothing is stored.</p>
       </div>
       <label
@@ -76,7 +76,7 @@ export function Analyze() {
           Download sample .pcap
         </a>
       </div>
-      {error && <p className="rounded-lg bg-bad-soft px-3 py-2 text-sm text-bad">{error}</p>}
+      {error && <p className="rounded-sm bg-bad-soft px-3 py-2 text-sm text-bad">{error}</p>}
       {result && (
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">

@@ -1,45 +1,46 @@
 @import "tailwindcss";
 
+/* PacketEye: an amber "radar console" look, distinct from the other projects. */
 :root {
-  --bg: #0b0f14;
-  --panel: #11171e;
-  --panel-2: #161e27;
-  --line: #1f2a35;
-  --ink: #e6edf3;
-  --muted: #8b98a5;
-  --faint: #5c6b79;
-  --accent: #7dd3fc;
-  --accent-ink: #041b26;
-  --ok: #4ade80;
-  --ok-soft: rgba(74, 222, 128, 0.12);
-  --warn: #fbbf24;
-  --warn-soft: rgba(251, 191, 36, 0.13);
-  --bad: #f87171;
-  --bad-soft: rgba(248, 113, 113, 0.13);
+  --bg: #0c0a07;
+  --panel: #13100b;
+  --panel-2: #1c1810;
+  --line: #2e2719;
+  --ink: #f3ead9;
+  --muted: #b3a58c;
+  --faint: #7d705a;
+  --accent: #f5a524;
+  --accent-ink: #1a1205;
+  --ok: #9bd982;
+  --ok-soft: rgba(155, 217, 130, 0.12);
+  --warn: #fb923c;
+  --warn-soft: rgba(251, 146, 60, 0.13);
+  --bad: #f05252;
+  --bad-soft: rgba(240, 82, 82, 0.14);
+  --grid: rgba(245, 165, 36, 0.045);
   color-scheme: dark;
 }
-
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
-    --bg: #f5f7f9;
-    --panel: #ffffff;
-    --panel-2: #f0f3f6;
-    --line: #dfe5ea;
-    --ink: #0f1419;
-    --muted: #55626e;
-    --faint: #8794a0;
-    --accent: #0369a1;
-    --accent-ink: #ffffff;
-    --ok: #15803d;
-    --ok-soft: rgba(21, 128, 61, 0.1);
-    --warn: #b45309;
-    --warn-soft: rgba(180, 83, 9, 0.1);
-    --bad: #dc2626;
-    --bad-soft: rgba(220, 38, 38, 0.09);
+    --bg: #f5efe3;
+    --panel: #fffaf0;
+    --panel-2: #efe6d4;
+    --line: #dccfb6;
+    --ink: #1f190f;
+    --muted: #5f523c;
+    --faint: #8f8167;
+    --accent: #b45309;
+    --accent-ink: #fffaf0;
+    --ok: #3f7d2a;
+    --ok-soft: rgba(63, 125, 42, 0.12);
+    --warn: #c2410c;
+    --warn-soft: rgba(194, 65, 12, 0.1);
+    --bad: #b91c1c;
+    --bad-soft: rgba(185, 28, 28, 0.1);
+    --grid: rgba(180, 83, 9, 0.06);
     color-scheme: light;
   }
 }
-
 @theme inline {
   --color-bg: var(--bg);
   --color-panel: var(--panel);
@@ -56,93 +57,36 @@
   --color-warn-soft: var(--warn-soft);
   --color-bad: var(--bad);
   --color-bad-soft: var(--bad-soft);
-  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Space Grotesk Variable", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
-
-html,
-body,
-#root {
-  min-height: 100%;
-  background: var(--bg);
-  color: var(--ink);
-}
+html, body, #root { min-height: 100%; color: var(--ink); }
 body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
-  font-feature-settings: "tnum", "cv11";
+  background-color: var(--bg);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 32px 32px;
 }
-
+h1, h2 { letter-spacing: -0.01em; }
 @layer components {
-  .panel {
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 14px;
-  }
-  .label {
-    font-size: 11px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--muted);
-    font-weight: 500;
-  }
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    height: 2.25rem;
-    padding: 0 0.9rem;
-    border-radius: 9px;
-    font-size: 0.875rem;
-    font-weight: 500;
-    border: 1px solid var(--line);
-    background: var(--panel-2);
-    color: var(--ink);
-    transition: border-color 0.15s, background 0.15s;
-    cursor: pointer;
-  }
-  .btn:hover:not(:disabled) {
-    border-color: var(--muted);
-  }
-  .btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-  .btn-accent {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--accent-ink);
-  }
-  .field {
-    height: 2.25rem;
-    width: 100%;
-    border-radius: 9px;
-    border: 1px solid var(--line);
-    background: var(--panel-2);
-    color: var(--ink);
-    padding: 0 0.7rem;
-    font-size: 0.875rem;
-  }
-  .field:focus {
-    outline: none;
-    border-color: var(--accent);
-  }
+  .panel { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 3px; }
+  /* Corner brackets, like a targeting reticle. */
+  .panel::before, .panel::after { content: ""; position: absolute; width: 10px; height: 10px; border-color: var(--accent); pointer-events: none; opacity: 0.7; }
+  .panel::before { top: -1px; left: -1px; border-top: 1px solid; border-left: 1px solid; }
+  .panel::after { bottom: -1px; right: -1px; border-bottom: 1px solid; border-right: 1px solid; }
+  .label { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  .btn { display: inline-flex; align-items: center; gap: 0.5rem; height: 2.25rem; padding: 0 0.85rem; border-radius: 3px; font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; border: 1px solid var(--line); background: var(--panel-2); color: var(--ink); cursor: pointer; transition: border-color .15s, color .15s; }
+  .btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn-accent { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .btn-accent:hover:not(:disabled) { color: var(--accent-ink); filter: brightness(1.08); }
+  .field { height: 2.25rem; width: 100%; border-radius: 3px; border: 1px solid var(--line); background: var(--panel-2); color: var(--ink); padding: 0 0.7rem; font-size: 0.875rem; }
+  .field:focus { outline: none; border-color: var(--accent); }
 }
-
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-@keyframes flash {
-  from { background: color-mix(in oklab, var(--accent) 16%, transparent); }
-  to { background: transparent; }
-}
-.row-new {
-  animation: flash 1.2s ease-out;
-}
-@media (prefers-reduced-motion: reduce) {
-  .row-new { animation: none; }
-}
-
-.crit { color: #fb7185; }
+:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
+@keyframes flash { from { background: color-mix(in oklab, var(--accent) 18%, transparent); } to { background: transparent; } }
+.row-new { animation: flash 1.4s ease-out; }
+@keyframes sweep { to { transform: rotate(360deg); } }
+.radar { animation: sweep 3.2s linear infinite; transform-origin: 50% 50%; }
+@media (prefers-reduced-motion: reduce) { .row-new, .radar { animation: none; } }

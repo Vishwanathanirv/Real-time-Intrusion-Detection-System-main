@@ -13,13 +13,13 @@ export function Alerts() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Alerts</h1>
+        <h1 className="text-[1.7rem] font-bold tracking-tight">Alerts</h1>
         <p className="mt-1 text-sm text-muted">Repeated detections are grouped into one alert with a count, so the queue stays readable during an attack.</p>
       </div>
       <div className="flex flex-wrap items-center gap-3">
-        <div className="inline-flex rounded-xl border border-line bg-panel p-1" role="tablist">
+        <div className="inline-flex rounded-sm border border-line bg-panel p-1" role="tablist">
           {STATUSES.map((s) => (
-            <button key={s} role="tab" aria-selected={status === s} onClick={() => setStatus(s)} className={`rounded-lg px-3.5 py-1.5 text-sm capitalize ${status === s ? "bg-panel-2 text-ink" : "text-muted hover:text-ink"}`}>
+            <button key={s} role="tab" aria-selected={status === s} onClick={() => setStatus(s)} className={`rounded-sm px-3.5 py-1.5 text-sm capitalize ${status === s ? "bg-panel-2 text-ink" : "text-muted hover:text-ink"}`}>
               {s}
             </button>
           ))}

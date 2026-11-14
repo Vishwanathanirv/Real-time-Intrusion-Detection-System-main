@@ -28,7 +28,7 @@ export function Detection() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Detection coverage</h1>
+        <h1 className="text-[1.7rem] font-bold tracking-tight">Detection coverage</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">
           Measured, not claimed. A labelled replay of office traffic with scheduled attacks runs through the sensor, and each detector is scored on whether and how fast it fired, and on false alerts during clean traffic.
         </p>
