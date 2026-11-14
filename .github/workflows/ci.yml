@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+        env:
+          NODE_OPTIONS: --disable-warning=ExperimentalWarning
+      - run: npm run build
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v5
+      - run: docker build -t packeteye .
+      - name: Smoke test the image
+        run: |
+          docker run -d -p 8080:8080 --name app packeteye
+          for i in $(seq 1 30); do curl -sf localhost:8080/api/health && exit 0; sleep 2; done
+          docker logs app; exit 1
