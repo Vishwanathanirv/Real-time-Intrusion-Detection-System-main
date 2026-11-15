@@ -2,39 +2,36 @@ import { useEffect, useState, type ReactNode } from "react";
 import { ago, api, clock, type Alert, type Severity } from "./lib";
 
 /** Lamp colour per severity: the LEDs on the front of the box. */
-const LAMP: Record<Severity, string> = { low: "var(--led-green)", medium: "var(--led-amber)", high: "var(--led-red)", critical: "var(--led-red)" };
+const LAMP: Record<Severity, string> = { low: "var(--faint)", medium: "var(--warn)", high: "var(--bad)", critical: "var(--bad)" };
 
 export function SevBadge({ s }: { s: Severity }) {
   return (
-    <span className="inline-flex items-center gap-2 font-display text-[13px] font-semibold capitalize" style={{ color: s === "low" ? "var(--muted)" : s === "medium" ? "var(--warn)" : "var(--bad)" }}>
+    <span className="inline-flex items-center gap-2 text-[13px] font-semibold capitalize" style={{ color: s === "low" ? "var(--muted)" : s === "medium" ? "var(--warn)" : "var(--bad)" }}>
       <span className={`led ${s === "critical" ? "blink" : ""}`} style={{ ["--c" as string]: LAMP[s] }} aria-hidden />
       {s}
     </span>
   );
 }
 
-/** A readout: a small inset screen with the figure in phosphor, and its name printed beneath. */
+/** A figure with its name above it. */
 export function Kpi({ label, value, sub, tone }: { label: string; value: ReactNode; sub?: ReactNode; tone?: string }) {
-  const alarm = tone === "bad";
   return (
-    <div className="panel px-3 pb-3 pt-4">
-      <div className="screen px-3 py-2.5">
-        <div className="lcd whitespace-nowrap text-[clamp(1.2rem,1.9vw,1.7rem)] leading-none tabular-nums" style={alarm ? { color: "var(--led-red)", textShadow: "0 0 8px rgba(255,59,59,.6)" } : undefined}>
-          {value}
-        </div>
+    <div className="screen px-3 py-2.5">
+      <div className="silk">{label}</div>
+      <div className="lcd mt-1 whitespace-nowrap text-[1.15rem] font-medium leading-none" style={tone === "bad" ? { color: "var(--bad)" } : tone === "accent" ? { color: "var(--accent)" } : undefined}>
+        {value}
       </div>
-      <div className="silk mt-2 px-0.5 text-ink">{label}</div>
-      {sub && <div className="mt-0.5 px-0.5 text-xs text-faint">{sub}</div>}
+      {sub && <div className="mt-1 text-[11.5px] text-faint">{sub}</div>}
     </div>
   );
 }
 
 export function Panel({ title, action, children, className = "" }: { title?: ReactNode; action?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={`panel ${className}`}>
+    <section className={`overflow-hidden rounded-[16px] border border-line bg-panel-solid ${className}`}>
       {(title || action) && (
-        <div className="flex items-center justify-between gap-3 px-5 pb-2 pt-3.5">
-          <h2 className="font-display text-[1.02rem] font-semibold tracking-[0.01em] [text-shadow:0_1px_0_var(--sheen)]">{title}</h2>
+        <div className="flex items-center justify-between gap-3 px-4 pb-2 pt-3">
+          <h2 className="text-[0.95rem] font-semibold">{title}</h2>
           {action}
         </div>
       )}
@@ -43,52 +40,51 @@ export function Panel({ title, action, children, className = "" }: { title?: Rea
   );
 }
 
-/** Packets per second over the last two minutes, traced on a scope screen, with red marks where alerts fired. */
-export function TrafficChart({ series }: { series: { t: number; packets: number; alerts: number }[] }) {
+/** Packets per second over the last two minutes, with a coral tick where an alert fired. */
+export function TrafficChart({ series, height = 160, onPick }: { series: { t: number; packets: number; alerts: number }[]; height?: number; onPick?: (t: number) => void }) {
   const W = 600;
   const H = 140;
   const max = Math.max(10, ...series.map((s) => s.packets));
   const x = (i: number) => (i / Math.max(1, series.length - 1)) * W;
-  const y = (v: number) => H - 6 - (v / max) * (H - 18);
+  const y = (v: number) => H - 4 - (v / max) * (H - 14);
   const d = series.map((s, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(s.packets).toFixed(1)}`).join(" ");
   return (
-    <div className="screen mx-4 mb-4 overflow-hidden">
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="block h-40 w-full" role="img" aria-label="Packets per second">
-        {Array.from({ length: 11 }, (_, i) => (
-          <line key={`v${i}`} x1={(i / 10) * W} x2={(i / 10) * W} y1={0} y2={H} stroke="var(--screen-line)" vectorEffect="non-scaling-stroke" />
-        ))}
-        {[0.25, 0.5, 0.75].map((g) => (
-          <line key={g} x1={0} x2={W} y1={y(max * g)} y2={y(max * g)} stroke="var(--screen-line)" vectorEffect="non-scaling-stroke" />
-        ))}
-        {series.map((s, i) => (s.alerts ? <line key={s.t} x1={x(i)} x2={x(i)} y1={0} y2={H} stroke="var(--led-red)" strokeWidth={2} opacity={0.75} vectorEffect="non-scaling-stroke" /> : null))}
-        <path d={d} fill="none" stroke="var(--phosphor)" strokeOpacity={0.35} strokeWidth={6} vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
-        <path d={d} fill="none" stroke="var(--phosphor)" strokeWidth={1.6} vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+    <div className="relative">
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="block w-full" style={{ height }} role="img" aria-label="Packets per second, last two minutes">
+        <defs>
+          <linearGradient id="tc-fill" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0" stopColor="var(--accent)" stopOpacity="0.3" />
+            <stop offset="1" stopColor="var(--accent)" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {series.length > 1 && <path d={`${d} L${W},${H} L0,${H} Z`} fill="url(#tc-fill)" />}
+        <path d={d} fill="none" stroke="var(--accent)" strokeWidth={1.8} vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+        {series.map((s, i) => (s.alerts ? <line key={s.t} x1={x(i)} x2={x(i)} y1={0} y2={H} stroke="var(--bad)" strokeWidth={2} vectorEffect="non-scaling-stroke" /> : null))}
+        {onPick &&
+          series.map((s, i) => (
+            <rect key={`h${s.t}`} x={x(i) - W / series.length / 2} width={W / series.length} y={0} height={H} fill="transparent" onClick={() => onPick(s.t)}>
+              <title>{`${new Date(s.t).toLocaleTimeString("en-IN", { hour12: false })}: ${s.packets} packets${s.alerts ? `, ${s.alerts} alert${s.alerts > 1 ? "s" : ""}` : ""}`}</title>
+            </rect>
+          ))}
       </svg>
-      <span className="lcd pointer-events-none absolute left-2.5 top-1.5 text-[11px] opacity-80">{Math.round(max).toLocaleString()} pkt/s</span>
+      <span className="lcd pointer-events-none absolute left-2 top-1 text-[10px] text-faint">{Math.round(max).toLocaleString()} pkt/s</span>
     </div>
   );
 }
 
-/** A segmented meter per row, like the level bars on a hardware display. */
 export function Bars({ rows }: { rows: { label: ReactNode; value: number; hint?: string }[] }) {
   const max = Math.max(1, ...rows.map((r) => r.value));
-  const SEG = 16;
   return (
-    <div className="screen space-y-2 px-3 py-3">
-      {rows.map((r, i) => {
-        const lit = Math.max(1, Math.round((r.value / max) * SEG));
-        return (
-          <div key={i} className="grid grid-cols-[minmax(0,8.5rem)_1fr_4.5rem] items-center gap-3">
-            <span className="lcd truncate text-[13px]">{r.label}</span>
-            <div className="flex gap-[2px]" aria-hidden>
-              {Array.from({ length: SEG }, (_, k) => (
-                <span key={k} className="h-2.5 flex-1 rounded-[1px]" style={{ background: k < lit ? "var(--phosphor)" : "rgba(255,187,85,.1)", boxShadow: k < lit ? "0 0 4px rgba(255,187,85,.45)" : undefined }} />
-              ))}
-            </div>
-            <span className="lcd text-right text-[12px] opacity-75">{r.hint}</span>
+    <div className="space-y-2">
+      {rows.map((r, i) => (
+        <div key={i} className="grid grid-cols-[minmax(0,8.5rem)_1fr_4.5rem] items-center gap-3">
+          <span className="lcd truncate text-[12px]">{r.label}</span>
+          <div className="h-2 overflow-hidden rounded-full bg-panel-2" aria-hidden>
+            <div className="h-full rounded-full bg-accent" style={{ width: `${Math.max(3, (r.value / max) * 100)}%` }} />
           </div>
-        );
-      })}
+          <span className="lcd text-right text-[11px] text-faint">{r.hint}</span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -125,15 +121,15 @@ const NEXT_STEPS: Record<string, string[]> = {
   anomaly: ["Confirm with the host owner whether the transfer is expected.", "Check the destination's reputation and the data involved.", "Tune the anomaly threshold if this is normal for your network."],
 };
 
-export function AlertDrawer({ alert, onClose, onChange }: { alert: Alert; onClose: () => void; onChange?: (a: Alert) => void }) {
+/** Everything about one alert, with the triage controls. Used in the inspector and in dialogs. */
+export function AlertBody({ alert, onChange }: { alert: Alert; onChange?: (a: Alert) => void }) {
   const [a, setA] = useState(alert);
   const [note, setNote] = useState(alert.note ?? "");
   const [err, setErr] = useState<string | null>(null);
   useEffect(() => {
-    const k = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", k);
-    return () => window.removeEventListener("keydown", k);
-  }, [onClose]);
+    setA(alert);
+    setNote(alert.note ?? "");
+  }, [alert]);
 
   async function set(status: "acknowledged" | "resolved" | "open") {
     try {
@@ -146,82 +142,88 @@ export function AlertDrawer({ alert, onClose, onChange }: { alert: Alert; onClos
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex justify-end" role="dialog" aria-modal="true" aria-label={a.title}>
-      <button className="absolute inset-0 bg-black/50" aria-label="Close" onClick={onClose} />
-      <aside className="relative h-full w-full max-w-xl overflow-y-auto border-l border-line bg-panel p-6 shadow-2xl">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <SevBadge s={a.severity} />
-            <h2 className="mt-3 text-xl font-semibold leading-snug">{a.title}</h2>
-            <p className="mt-2 text-sm leading-relaxed text-muted">{a.description}</p>
+    <div>
+      <SevBadge s={a.severity} />
+      <h2 className="mt-2 text-lg font-semibold leading-snug">{a.title}</h2>
+      <p className="mt-1.5 text-sm leading-relaxed text-muted">{a.description}</p>
+
+      <a className="screen mt-4 block px-3 py-2.5 text-sm hover:underline" href={/^T\d/.test(a.mitre.id) ? `https://attack.mitre.org/techniques/${a.mitre.id.replace(".", "/")}/` : undefined} target="_blank" rel="noreferrer">
+        <span className="silk block">MITRE ATT&amp;CK, {a.mitre.tactic}</span>
+        <span className="lcd text-accent">{a.mitre.id}</span> {a.mitre.name}
+      </a>
+
+      <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
+        {[
+          ["Source", a.src],
+          ["Target", a.dst],
+          ["First seen", clock(a.firstSeen)],
+          ["Last seen", `${clock(a.lastSeen)} (${a.count}×)`],
+        ].map(([k, v]) => (
+          <div key={k} className="screen px-3 py-2">
+            <dt className="silk">{k}</dt>
+            <dd className="lcd mt-0.5 break-all text-[11.5px]">{v}</dd>
           </div>
-          <button className="btn h-8 px-2.5" onClick={onClose} aria-label="Close panel">
-            ✕
+        ))}
+      </dl>
+
+      <h3 className="label mt-5">Evidence</h3>
+      <table className="mt-1 w-full text-sm">
+        <tbody>
+          {Object.entries(a.evidence).map(([k, v]) => (
+            <tr key={k} className="border-t border-line">
+              <td className="py-1.5 pr-4 text-muted">{k.replace(/([A-Z])/g, " $1").toLowerCase()}</td>
+              <td className="lcd break-all py-1.5 text-right text-[11.5px]">{String(v)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <h3 className="label mt-5">What to do</h3>
+      <ol className="mt-1.5 list-decimal space-y-1.5 pl-5 text-sm text-muted">
+        {(NEXT_STEPS[a.type] ?? []).map((s) => (
+          <li key={s}>{s}</li>
+        ))}
+      </ol>
+
+      <div className="mt-5 border-t border-line pt-4">
+        <div className="flex items-center justify-between">
+          <span className="label">Triage</span>
+          <span className="text-xs capitalize text-muted">Status: {a.status ?? "open"}</span>
+        </div>
+        <textarea className="field mt-2 h-20" placeholder="Add a note for the team (optional)" value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} />
+        <div className="mt-2 flex flex-wrap gap-2">
+          <button className="btn" onClick={() => set("acknowledged")}>
+            Acknowledge
           </button>
-        </div>
-
-        <div className="mt-6 rounded-sm border border-line p-4">
-          <div className="label">MITRE ATT&amp;CK</div>
-          <a className="mt-2 block text-sm hover:underline" href={/^T\d/.test(a.mitre.id) ? `https://attack.mitre.org/techniques/${a.mitre.id.replace(".", "/")}/` : undefined} target="_blank" rel="noreferrer">
-            <span className="font-mono text-accent">{a.mitre.id}</span> {a.mitre.name}
-          </a>
-          <div className="mt-1 text-xs text-faint">Tactic: {a.mitre.tactic}</div>
-        </div>
-
-        <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
-          {[
-            ["Source", a.src],
-            ["Target", a.dst],
-            ["First seen", clock(a.firstSeen)],
-            ["Last seen", `${clock(a.lastSeen)} (${a.count}×)`],
-          ].map(([k, v]) => (
-            <div key={k} className="rounded-sm bg-panel-2 p-3">
-              <dt className="label">{k}</dt>
-              <dd className="mt-1 break-all font-mono text-xs">{v}</dd>
-            </div>
-          ))}
-        </dl>
-
-        <h3 className="label mt-6">Evidence</h3>
-        <table className="mt-2 w-full text-sm">
-          <tbody>
-            {Object.entries(a.evidence).map(([k, v]) => (
-              <tr key={k} className="border-t border-line">
-                <td className="py-2 pr-4 text-muted">{k.replace(/([A-Z])/g, " $1").toLowerCase()}</td>
-                <td className="break-all py-2 text-right font-mono text-xs">{String(v)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        <h3 className="label mt-6">Recommended response</h3>
-        <ol className="mt-2 list-decimal space-y-1.5 pl-5 text-sm text-muted">
-          {(NEXT_STEPS[a.type] ?? []).map((s) => (
-            <li key={s}>{s}</li>
-          ))}
-        </ol>
-
-        <div className="mt-6 rounded-sm border border-line p-4">
-          <div className="flex items-center justify-between">
-            <span className="label">Triage</span>
-            <span className="text-xs capitalize text-muted">Status: {a.status ?? "open"}</span>
-          </div>
-          <textarea className="field mt-3 h-20 py-2" placeholder="Add a note for the team (optional)" value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} />
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button className="btn" onClick={() => set("acknowledged")}>
-              Acknowledge
+          <button className="btn btn-accent" onClick={() => set("resolved")}>
+            Resolve
+          </button>
+          {a.status && a.status !== "open" && (
+            <button className="btn" onClick={() => set("open")}>
+              Reopen
             </button>
-            <button className="btn btn-accent" onClick={() => set("resolved")}>
-              Resolve
-            </button>
-            {a.status && a.status !== "open" && (
-              <button className="btn" onClick={() => set("open")}>
-                Reopen
-              </button>
-            )}
-          </div>
-          {err && <p className="mt-2 text-sm text-bad">{err}</p>}
+          )}
         </div>
+        {err && <p className="mt-2 text-sm text-bad">{err}</p>}
+      </div>
+    </div>
+  );
+}
+
+export function AlertDrawer({ alert, onClose, onChange }: { alert: Alert; onClose: () => void; onChange?: (a: Alert) => void }) {
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", k);
+    return () => window.removeEventListener("keydown", k);
+  }, [onClose]);
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end p-2" role="dialog" aria-modal="true" aria-label={alert.title}>
+      <button className="absolute inset-0 bg-black/40" aria-label="Close" onClick={onClose} />
+      <aside className="panel rise scroll-y relative h-full w-full max-w-md !bg-panel-solid p-5">
+        <button className="btn absolute right-3 top-3 h-8 px-2.5" onClick={onClose} aria-label="Close panel">
+          ✕
+        </button>
+        <AlertBody alert={alert} onChange={onChange} />
       </aside>
     </div>
   );

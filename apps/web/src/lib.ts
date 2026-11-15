@@ -28,6 +28,7 @@ export type Stats = {
   topPorts: { port: number; packets: number }[];
   series: { t: number; packets: number; bytes: number; alerts: number }[];
   avgMicrosPerPacket?: number;
+  graph: { nodes: { ip: string; bytes: number; internal: boolean }[]; edges: { src: string; dst: string; bytes: number; packets: number; ports: number[] }[] };
   state: { mode: string; running: boolean; autopilot: boolean; activeAttacks: { id: string; kind: string; endsAt: number }[] };
 };
 

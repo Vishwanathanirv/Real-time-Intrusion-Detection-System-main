@@ -9,7 +9,7 @@ PacketEye watches network traffic, rebuilds every connection, and raises alerts 
 
 It is built **end to end in TypeScript**: a pcap parser, TLS ClientHello parsing with **JA4 fingerprinting**, flow tracking, eight behavioural detectors, an unsupervised anomaly model, a **Suricata-compatible rule engine**, a Node.js API and a React dashboard.
 
-![Overview](docs/screenshots/overview.png)
+![The live network map](docs/screenshots/overview.png)
 
 > Version 2 is a full rebuild. The original Python, Spring Boot and React version is kept on the [`v1-original`](https://github.com/Vishwanathanirv/real-time-intrusion-detection-system-main/tree/v1-original) branch.
 
@@ -75,13 +75,14 @@ Repeated hits are grouped into one alert with a running count, so a 5,000-packet
 
 ## Dashboard
 
-The dashboard is designed to look like what PacketEye is: a rack-mounted sensor appliance. Brushed aluminium faceplates (black anodised in dark mode) with screws in the corners, inset screens with amber phosphor readouts and a scope trace for traffic, segmented level meters, LED lamps for severity and status, and push buttons that light up for the section you're in and for each attack you launch.
+The app is a **live map of the network** that fills the screen. Every host is a dot: servers in the middle, workstations around them, the internet outside, placed by address so nothing jumps around. Traffic moves along the links as animated dashes, and an attack turns its hosts and links coral. Everything else floats over the map:
 
-- **Overview:**
-  - live packets per second, bandwidth, active flows and open alerts
-  - a two-minute traffic chart with alert markers
-  - top talkers, protocol mix and top ports
-  - one-click attack simulation
+- **Vital signs:** packets per second, bandwidth, active flows and open alerts.
+- **Alert feed:** the latest alerts; click one and its two hosts light up on the map while the inspector explains it.
+- **Inspector:** the network right now (busiest hosts, protocols and ports), or a host you clicked (its alerts and who it talks to, with ports), or an alert (MITRE technique, evidence, what to do, acknowledge or resolve with a note).
+- **Timeline:** the last two minutes of traffic with a tick where each alert fired, plus attack launch, pause and autopilot.
+- **Tool dock:** each tool opens as a sheet floating over the map, so the live view never goes away. Number keys 1 to 6 switch tools and Esc goes back to the map. Pan by dragging, zoom with the wheel or the buttons. Light and dark, and it works on a phone.
+
 - **TLS clients:** an inventory of every TLS fingerprint on the network, rarest first, with the hosts using it, server names and what the software looks like.
 - **Rules:** edit the Suricata ruleset in the browser. Bad rules are rejected with line numbers; each loaded rule shows how many packets it has matched.
 - **Alerts:** a triage queue (open, acknowledged, resolved) with severity filters. Each alert shows its MITRE technique, evidence, recommended response steps and analyst notes.

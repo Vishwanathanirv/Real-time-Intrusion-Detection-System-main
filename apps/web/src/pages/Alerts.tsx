@@ -13,7 +13,7 @@ export function Alerts() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-[2.3rem] font-bold leading-none tracking-tight">Alerts</h1>
+        <h1 className="display pr-12 text-[1.6rem] font-bold leading-tight">Alerts</h1>
         <p className="mt-2 text-[0.95rem] text-muted">Repeated detections are grouped into one alert with a count, so the queue stays readable during an attack.</p>
       </div>
       <div className="flex flex-wrap items-center gap-3">

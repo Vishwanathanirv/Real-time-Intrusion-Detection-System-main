@@ -1,261 +1,277 @@
 @import "tailwindcss";
 
 /*
- * PacketEye looks like what it is: a rack-mounted sensor appliance. Brushed aluminium (or black
- * anodised) faceplates, inset dark screens with amber phosphor readouts, LED lamps for status
- * and severity, and push buttons. Phosphor colours only ever appear inside a screen.
+ * PacketEye is a live map of the network. The map fills the screen and everything else floats
+ * over it: an island with the vital signs, a tool dock, an inspector for whatever you select,
+ * and a timeline you can scrub. Teal is normal traffic, coral is an attack; nothing else is
+ * coloured, so an attack is the brightest thing on screen.
  */
 :root {
-  --bg: #c4cad0;
-  --panel: #e3e6e9;
-  --panel-2: #d3d8dc;
-  --line: #a9b0b8;
-  --ink: #1b2026;
-  --muted: #4a535d;
-  --faint: #737c86;
-  --accent: #1f5fbf;
+  --bg: #eef3f7;
+  --dot: #cdd9e3;
+  --panel: rgba(255, 255, 255, 0.86);
+  --panel-solid: #ffffff;
+  --panel-2: #e8eff5;
+  --line: #d3dee7;
+  --ink: #0f1c2a;
+  --muted: #4c5e70;
+  --faint: #8597a8;
+  --accent: #0a8f9c;
+  --accent-soft: rgba(10, 143, 156, 0.12);
   --accent-ink: #ffffff;
-  --ok: #188a43;
-  --ok-soft: rgba(24, 138, 67, 0.12);
-  --warn: #b26a00;
-  --warn-soft: rgba(178, 106, 0, 0.13);
-  --bad: #c42b2b;
-  --bad-soft: rgba(196, 43, 43, 0.11);
-  --sheen: rgba(255, 255, 255, 0.75);
-  --shade: rgba(0, 0, 0, 0.18);
-  /* Inside the screens. */
-  --screen: #0c1210;
-  --screen-line: rgba(255, 186, 82, 0.13);
-  --phosphor: #ffbb55;
-  --phosphor-dim: #a8763a;
-  --led-green: #2fe07a;
-  --led-amber: #ffb020;
-  --led-red: #ff3b3b;
+  --ok: #0a8f9c;
+  --warn: #c47a00;
+  --bad: #e23d5c;
+  --bad-soft: rgba(226, 61, 92, 0.12);
+  --node: #23384d;
+  --node-ext: #7a8fa3;
+  --shadow: 0 1px 2px rgba(15, 28, 42, 0.08), 0 14px 36px -14px rgba(15, 28, 42, 0.28);
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #111316;
-    --panel: #22252a;
-    --panel-2: #2a2e34;
-    --line: #3b4048;
-    --ink: #e8ebee;
-    --muted: #a3aab3;
-    --faint: #6e7680;
-    --accent: #6ea2ff;
-    --accent-ink: #0a1430;
-    --ok: #45d483;
-    --ok-soft: rgba(69, 212, 131, 0.13);
+    --bg: #08111c;
+    --dot: #142233;
+    --panel: rgba(13, 24, 37, 0.84);
+    --panel-solid: #0e1a28;
+    --panel-2: #142336;
+    --line: #1d3047;
+    --ink: #e4eef7;
+    --muted: #94a9bd;
+    --faint: #5e748a;
+    --accent: #3fe0d0;
+    --accent-soft: rgba(63, 224, 208, 0.13);
+    --accent-ink: #04201d;
+    --ok: #3fe0d0;
     --warn: #ffb547;
-    --warn-soft: rgba(255, 181, 71, 0.13);
-    --bad: #ff6464;
-    --bad-soft: rgba(255, 100, 100, 0.13);
-    --sheen: rgba(255, 255, 255, 0.06);
-    --shade: rgba(0, 0, 0, 0.5);
-    --screen: #07090a;
+    --bad: #ff5577;
+    --bad-soft: rgba(255, 85, 119, 0.14);
+    --node: #c9dcec;
+    --node-ext: #4d6680;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 18px 44px -16px rgba(0, 0, 0, 0.85);
     color-scheme: dark;
   }
 }
+:root[data-theme="dark"] {
+  --bg: #08111c;
+  --dot: #142233;
+  --panel: rgba(13, 24, 37, 0.84);
+  --panel-solid: #0e1a28;
+  --panel-2: #142336;
+  --line: #1d3047;
+  --ink: #e4eef7;
+  --muted: #94a9bd;
+  --faint: #5e748a;
+  --accent: #3fe0d0;
+  --accent-soft: rgba(63, 224, 208, 0.13);
+  --accent-ink: #04201d;
+  --ok: #3fe0d0;
+  --warn: #ffb547;
+  --bad: #ff5577;
+  --bad-soft: rgba(255, 85, 119, 0.14);
+  --node: #c9dcec;
+  --node-ext: #4d6680;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 18px 44px -16px rgba(0, 0, 0, 0.85);
+  color-scheme: dark;
+}
+
 @theme inline {
   --color-bg: var(--bg);
   --color-panel: var(--panel);
+  --color-panel-solid: var(--panel-solid);
   --color-panel-2: var(--panel-2);
   --color-line: var(--line);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-faint: var(--faint);
   --color-accent: var(--accent);
-  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
   --color-ok: var(--ok);
-  --color-ok-soft: var(--ok-soft);
   --color-warn: var(--warn);
-  --color-warn-soft: var(--warn-soft);
   --color-bad: var(--bad);
   --color-bad-soft: var(--bad-soft);
-  --color-screen: var(--screen);
-  --color-phosphor: var(--phosphor);
-  --font-sans: "Barlow", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Barlow Semi Condensed", "Barlow", ui-sans-serif, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
-  --font-lcd: "Share Tech Mono", "JetBrains Mono", ui-monospace, monospace;
+  --font-sans: "Hubot Sans Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Hubot Sans Variable", ui-sans-serif, sans-serif;
+  --font-mono: "Martian Mono Variable", ui-monospace, monospace;
 }
+
 html,
 body,
 #root {
-  min-height: 100%;
+  height: 100%;
+  background: var(--bg);
   color: var(--ink);
 }
 body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
-  background-color: var(--bg);
-  /* Rack rails: faint vertical rows of mounting holes down both edges of the page. */
-  background-image:
-    radial-gradient(circle at 10px 50%, var(--shade) 0 2.5px, transparent 3px),
-    radial-gradient(circle at calc(100% - 10px) 50%, var(--shade) 0 2.5px, transparent 3px);
-  background-size: 100% 28px;
-  background-repeat: repeat-y;
-}
-h1,
-h2,
-.display {
-  font-family: var(--font-display);
+  overflow: hidden;
 }
 
 @layer components {
-  /* A faceplate: brushed metal, a highlight along the top edge and a screw in each corner. */
+  /* Floating surfaces: frosted, rounded, lifted off the map. */
   .panel {
-    position: relative;
-    border-radius: 5px;
+    background: var(--panel);
     border: 1px solid var(--line);
-    background:
-      radial-gradient(circle at 9px 9px, var(--faint) 0 2px, var(--shade) 2.5px, transparent 3.2px),
-      radial-gradient(circle at calc(100% - 9px) 9px, var(--faint) 0 2px, var(--shade) 2.5px, transparent 3.2px),
-      radial-gradient(circle at 9px calc(100% - 9px), var(--faint) 0 2px, var(--shade) 2.5px, transparent 3.2px),
-      radial-gradient(circle at calc(100% - 9px) calc(100% - 9px), var(--faint) 0 2px, var(--shade) 2.5px, transparent 3.2px),
-      repeating-linear-gradient(90deg, transparent 0 2px, rgba(255, 255, 255, 0.03) 2px 3px),
-      linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
-    box-shadow:
-      inset 0 1px 0 var(--sheen),
-      0 1px 0 var(--sheen),
-      0 6px 14px -10px var(--shade);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(18px) saturate(1.5);
+    -webkit-backdrop-filter: blur(18px) saturate(1.5);
   }
-  /* Silkscreen: the printed text on a faceplate. */
-  .label,
-  .silk {
-    font-family: var(--font-display);
-    font-weight: 600;
-    font-size: 12.5px;
-    letter-spacing: 0.03em;
-    color: var(--muted);
-  }
-  /* An inset screen with amber phosphor and faint scanlines. */
   .screen {
     position: relative;
-    border-radius: 4px;
-    background:
-      repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 3px),
-      var(--screen);
-    color: var(--phosphor);
-    box-shadow:
-      inset 0 2px 6px rgba(0, 0, 0, 0.85),
-      0 1px 0 var(--sheen);
-    border: 1px solid #000;
+    background: var(--panel-2);
+    border-radius: 12px;
   }
   .lcd {
-    font-family: var(--font-lcd);
-    color: var(--phosphor);
-    text-shadow: 0 0 6px color-mix(in oklab, var(--phosphor) 55%, transparent);
-    letter-spacing: 0.02em;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
   }
-  /* A physical push button. */
+  .silk {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 550;
+  }
+  .label {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .display {
+    font-stretch: 118%;
+    letter-spacing: -0.02em;
+  }
+  .led {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    flex: none;
+    border-radius: 999px;
+    background: var(--c, var(--ok));
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--c, var(--ok)) 22%, transparent);
+  }
+  .led-off {
+    background: var(--faint);
+    box-shadow: none;
+    opacity: 0.6;
+  }
   .btn {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    height: 2.25rem;
-    padding: 0 0.9rem;
-    border-radius: 4px;
-    font-family: var(--font-display);
+    height: 2.15rem;
+    padding: 0 0.85rem;
+    border-radius: 11px;
+    font-size: 0.86rem;
     font-weight: 600;
-    font-size: 0.92rem;
-    letter-spacing: 0.02em;
     border: 1px solid var(--line);
-    background: linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+    background: var(--panel-solid);
     color: var(--ink);
-    box-shadow:
-      inset 0 1px 0 var(--sheen),
-      0 2px 0 var(--shade);
     cursor: pointer;
-    transition: transform 0.06s, box-shadow 0.06s;
+    transition: border-color 0.12s, background 0.12s;
   }
   .btn:hover:not(:disabled) {
-    border-color: var(--muted);
-  }
-  .btn:active:not(:disabled),
-  .btn[aria-pressed="true"] {
-    transform: translateY(1px);
-    box-shadow:
-      inset 0 2px 4px var(--shade),
-      0 1px 0 var(--sheen);
+    border-color: color-mix(in oklab, var(--accent) 50%, var(--line));
   }
   .btn:disabled {
     opacity: 0.45;
     cursor: not-allowed;
   }
+  .btn[aria-pressed="true"] {
+    border-color: var(--bad);
+    color: var(--bad);
+    background: var(--bad-soft);
+  }
   .btn-accent {
-    background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 88%, white) 0%, var(--accent) 100%);
-    border-color: color-mix(in oklab, var(--accent) 70%, black);
+    background: var(--accent);
+    border-color: var(--accent);
     color: var(--accent-ink);
   }
   .field {
     height: 2.25rem;
     width: 100%;
-    border-radius: 4px;
-    border: 1px solid #000;
-    background: var(--screen);
-    color: var(--phosphor);
-    font-family: var(--font-lcd);
+    border-radius: 11px;
+    border: 1px solid var(--line);
+    background: var(--panel-solid);
+    color: var(--ink);
     padding: 0 0.7rem;
-    font-size: 0.95rem;
-    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.8);
+    font-size: 0.9rem;
   }
   .field:focus {
-    outline: 2px solid var(--accent);
-    outline-offset: 1px;
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
   }
-  /* A status lamp. */
-  .led {
-    display: inline-block;
-    width: 9px;
-    height: 9px;
-    border-radius: 999px;
-    background: var(--c, var(--faint));
-    box-shadow:
-      0 0 0 1px rgba(0, 0, 0, 0.45),
-      0 0 7px var(--c, transparent);
+  textarea.field {
+    height: auto;
+    padding: 0.55rem 0.7rem;
   }
-  .led-off {
-    background: color-mix(in oklab, var(--c, var(--faint)) 25%, #222);
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45);
+  .scroll-y {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--line) transparent;
+  }
+  .dots {
+    background-color: var(--bg);
+    background-image: radial-gradient(var(--dot) 1.2px, transparent 1.3px);
+    background-size: 22px 22px;
   }
 }
+
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
-@keyframes flash {
-  from {
-    background: color-mix(in oklab, var(--accent) 16%, transparent);
-  }
-  to {
-    background: transparent;
-  }
-}
-.row-new {
-  animation: flash 1.4s ease-out;
-}
+
 @keyframes blink {
   50% {
-    opacity: 0.35;
+    opacity: 0.25;
   }
 }
 .blink {
-  animation: blink 1.1s steps(2, start) infinite;
+  animation: blink 1s steps(2, start) infinite;
 }
-@keyframes sweep {
+/* Packets travelling along a link. */
+@keyframes flow {
   to {
-    transform: rotate(360deg);
+    stroke-dashoffset: -24;
   }
 }
-.radar {
-  animation: sweep 3.2s linear infinite;
-  transform-origin: 50% 50%;
+.flow {
+  stroke-dasharray: 2 10;
+  animation: flow var(--speed, 1.2s) linear infinite;
+}
+@keyframes pulse-ring {
+  from {
+    r: var(--r0);
+    opacity: 0.7;
+  }
+  to {
+    r: calc(var(--r0) + 22px);
+    opacity: 0;
+  }
+}
+.alarm {
+  animation: pulse-ring 1.4s ease-out infinite;
+}
+@keyframes rise {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+}
+.row-new,
+.rise {
+  animation: rise 0.3s ease-out;
 }
 @media (prefers-reduced-motion: reduce) {
+  .blink,
+  .flow,
+  .alarm,
   .row-new,
-  .radar,
-  .blink {
+  .rise {
     animation: none;
   }
 }

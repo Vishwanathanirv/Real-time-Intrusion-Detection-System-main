@@ -45,7 +45,7 @@ export function TlsTable({ clients, common }: { clients: TlsClient[]; common: nu
                 </td>
                 <td className="px-2 py-3">
                   {c.profile ?? <span className="text-muted">unknown client</span>}
-                  {rare && <span className="ml-2 inline-flex items-center gap-1.5 font-display text-[12.5px] font-semibold text-bad"><span className="led blink" style={{ ["--c" as string]: "var(--led-red)" }} aria-hidden />rare</span>}
+                  {rare && <span className="ml-2 inline-flex items-center gap-1.5 font-display text-[12.5px] font-semibold text-bad"><span className="led blink" style={{ ["--c" as string]: "var(--bad)" }} aria-hidden />rare</span>}
                 </td>
                 <td className="px-2 py-3 text-right font-mono" title={c.hostList.join(", ")}>
                   {c.hosts}
@@ -68,7 +68,7 @@ export function Tls() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-[2.3rem] font-bold leading-none tracking-tight">TLS clients</h1>
+        <h1 className="display pr-12 text-[1.6rem] font-bold leading-tight">TLS clients</h1>
         <p className="mt-2 max-w-3xl text-[0.95rem] text-muted">
           Encryption hides what a program says, but not how it says hello. Every TLS connection starts with a ClientHello whose cipher suites, extensions and signature algorithms are chosen by the software, not the user. PacketEye turns each one
           into a JA4 fingerprint. Browsers and system services are shared by many machines; a fingerprint used by one machine only is worth a look.

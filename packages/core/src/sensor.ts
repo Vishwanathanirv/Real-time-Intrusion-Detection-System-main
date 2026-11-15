@@ -17,6 +17,8 @@ export type TrafficStats = {
   topPorts: { port: number; packets: number }[];
   /** Per-second series for the last 120 seconds. */
   series: { t: number; packets: number; bytes: number; alerts: number }[];
+  /** Who is talking to whom right now: recent bytes per pair of hosts, fading over about a minute. */
+  graph: { nodes: { ip: string; bytes: number; internal: boolean }[]; edges: { src: string; dst: string; bytes: number; packets: number; ports: number[] }[] };
 };
 
 /**
@@ -31,6 +33,7 @@ export class Sensor {
   private talkers = new Map<string, { bytes: number; packets: number }>();
   private ports = new Map<number, number>();
   private series = new Map<number, { packets: number; bytes: number; alerts: number }>();
+  private pairs = new Map<string, { bytes: number; packets: number; ports: Map<number, number>; decayedAt: number }>();
   processingNs = 0;
 
   constructor(opts: { config?: DetectorConfig; model?: BaselineModel | null; rules?: string | null; onAlert?: (a: Alert, isNew: boolean) => void; onFlow?: (f: Flow) => void } = {}) {
@@ -67,6 +70,15 @@ export class Sensor {
     tk.packets++;
     this.talkers.set(p.src, tk);
     if (p.dport && p.dport < 49152) this.ports.set(p.dport, (this.ports.get(p.dport) ?? 0) + 1);
+    const key = `${p.src}>${p.dst}`;
+    let pair = this.pairs.get(key);
+    if (!pair) {
+      pair = { bytes: 0, packets: 0, ports: new Map(), decayedAt: p.ts };
+      this.pairs.set(key, pair);
+    }
+    pair.bytes += p.len;
+    pair.packets++;
+    if (p.dport) pair.ports.set(p.dport, (pair.ports.get(p.dport) ?? 0) + 1);
     const b = this.bucket(p.ts);
     b.packets++;
     b.bytes += p.len;
@@ -78,6 +90,19 @@ export class Sensor {
   tick(now: number): void {
     this.flows.sweep(now);
     this.engine.sweep(now);
+    // Recent traffic fades with a half-life of about 20 seconds, so the graph shows what's
+    // happening now and quiet pairs drop off.
+    for (const [k, v] of this.pairs) {
+      const f = Math.pow(0.5, Math.max(0, now - v.decayedAt) / 20_000);
+      v.bytes *= f;
+      v.packets *= f;
+      for (const [port, n] of v.ports) {
+        if (n * f < 0.5) v.ports.delete(port);
+        else v.ports.set(port, n * f);
+      }
+      v.decayedAt = now;
+      if (v.bytes < 64) this.pairs.delete(k);
+    }
     if (this.talkers.size > 5000) {
       const keep = [...this.talkers.entries()].sort((a, b) => b[1].bytes - a[1].bytes).slice(0, 1000);
       this.talkers = new Map(keep);
@@ -92,12 +117,31 @@ export class Sensor {
       protocols: { ...this.protocols },
       topTalkers: [...this.talkers.entries()].sort((a, b) => b[1].bytes - a[1].bytes).slice(0, 8).map(([ip, v]) => ({ ip, ...v })),
       topPorts: [...this.ports.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([port, packets]) => ({ port, packets })),
+      graph: this.graph(),
       series: Array.from({ length: 120 }, (_, i) => {
         const t = s - 119 + i;
         const b = this.series.get(t);
         return { t: t * 1000, packets: b?.packets ?? 0, bytes: b?.bytes ?? 0, alerts: b?.alerts ?? 0 };
       }),
     };
+  }
+
+  /** The busiest conversations, with every host they involve. */
+  graph(limit = 90): TrafficStats["graph"] {
+    const edges = [...this.pairs.entries()]
+      .sort((a, b) => b[1].bytes - a[1].bytes)
+      .slice(0, limit)
+      .map(([k, v]) => {
+        const [src, dst] = k.split(">");
+        return { src, dst, bytes: Math.round(v.bytes), packets: Math.round(v.packets), ports: [...v.ports.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([port]) => port) };
+      });
+    const nodes = new Map<string, number>();
+    for (const e of edges) {
+      nodes.set(e.src, (nodes.get(e.src) ?? 0) + e.bytes);
+      nodes.set(e.dst, (nodes.get(e.dst) ?? 0) + e.bytes);
+    }
+    const internal = (ip: string) => /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(ip);
+    return { nodes: [...nodes.entries()].map(([ip, bytes]) => ({ ip, bytes, internal: internal(ip) })), edges };
   }
 
   get avgNsPerPacket() {
