@@ -1,6 +1,5 @@
 # PacketEye · Real-time network intrusion detection
 
-> Built by [Vishwanathan R](https://vishwanathan.dev) · [Portfolio](https://vishwanathan.dev) · [Resume](https://vishwanathan.dev/resume.pdf)
 
 PacketEye watches network traffic, rebuilds every connection, and raises alerts for real attack techniques. Each alert is mapped to **MITRE ATT&CK** and comes with evidence and recommended response steps. It can work from:
 - live traffic, captured through `tcpdump`
@@ -177,4 +176,4 @@ TypeScript · Node.js 22 · Fastify · WebSocket · node:sqlite · Zod · React 
 
 ## License
 
-MIT © Vishwanathan R
+MIT

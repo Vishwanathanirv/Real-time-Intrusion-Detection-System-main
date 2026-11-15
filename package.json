@@ -3,7 +3,6 @@
   "private": true,
   "version": "2.0.0",
   "description": "Real-time network intrusion detection in TypeScript: pcap parsing, flow tracking, MITRE ATT&CK-mapped detectors, anomaly detection and a live SOC dashboard.",
-  "author": "Vishwanathan R <mail@vishwanathan.dev> (https://vishwanathan.dev)",
   "license": "MIT",
   "type": "module",
   "workspaces": [

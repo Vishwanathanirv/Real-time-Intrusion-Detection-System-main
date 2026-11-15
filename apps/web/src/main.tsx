@@ -90,11 +90,7 @@ function NetworkNow({ live }: { live: Live }) {
         </div>
       </section>
       <p className="border-t border-line pt-3 text-xs text-faint">
-        Built by{" "}
-        <a href="https://vishwanathan.dev" className="underline underline-offset-2">
-          Vishwanathan R
-        </a>
-        . For networks you own or may monitor.{" "}
+        For networks you own or may monitor.{" "}
         <a href="https://github.com/Vishwanathanirv/real-time-intrusion-detection-system-main" className="underline underline-offset-2">
           Source
         </a>
