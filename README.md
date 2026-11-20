@@ -1,5 +1,7 @@
 # PacketEye · Real-time network intrusion detection
 
+**[Live demo → packeteye.vercel.app](https://packeteye.vercel.app)**: the whole sensor runs in your browser, with no sign-up and no data leaving your machine.
+
 
 PacketEye watches network traffic, rebuilds every connection, and raises alerts for real attack techniques. Each alert is mapped to **MITRE ATT&CK** and comes with evidence and recommended response steps. It can work from:
 - live traffic, captured through `tcpdump`
