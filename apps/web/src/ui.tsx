@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { useActions } from "./actions";
+import { Plain, PLAIN, useActions } from "./actions";
 import { ago, api, clock, type Alert, type Severity } from "./lib";
 
 /** Lamp colour per severity: the LEDs on the front of the box. */
@@ -167,6 +167,12 @@ export function AlertBody({ alert, onChange }: { alert: Alert; onChange?: (a: Al
       <SevBadge s={a.severity} />
       <h2 className="mt-2 text-lg font-semibold leading-snug">{a.title}</h2>
       <p className="mt-1.5 text-sm leading-relaxed text-muted">{a.description}</p>
+      {PLAIN[a.type] && (
+        <Plain className="mt-3">
+          <strong className="font-semibold">In plain words: </strong>
+          {PLAIN[a.type].what} <em className="not-italic text-muted">Why it matters: {PLAIN[a.type].why}</em>
+        </Plain>
+      )}
 
       {actions.replay && (
         <div className="mt-3 flex flex-wrap gap-2">
@@ -199,6 +205,7 @@ export function AlertBody({ alert, onChange }: { alert: Alert; onChange?: (a: Al
       </dl>
 
       <h3 className="label mt-5">Evidence</h3>
+      <Plain className="mt-1.5">The measurements that set this off. The sensor counts and times things; it never reads anyone's messages.</Plain>
       <table className="mt-1 w-full text-sm">
         <tbody>
           {Object.entries(a.evidence).map(([k, v]) => (
@@ -211,6 +218,7 @@ export function AlertBody({ alert, onChange }: { alert: Alert; onChange?: (a: Al
       </table>
 
       <h3 className="label mt-5">What to do</h3>
+      <Plain className="mt-1.5">The steps an analyst would take next. MITRE ATT&amp;CK above is the shared dictionary of attacker techniques, so teams describe the same thing the same way.</Plain>
       <ol className="mt-1.5 list-decimal space-y-1.5 pl-5 text-sm text-muted">
         {(NEXT_STEPS[a.type] ?? []).map((s) => (
           <li key={s}>{s}</li>

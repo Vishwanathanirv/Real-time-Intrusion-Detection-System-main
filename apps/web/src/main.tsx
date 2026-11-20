@@ -12,7 +12,7 @@ import { Detection } from "./pages/Detection";
 import { Lab } from "./pages/Lab";
 import { Rules } from "./pages/Rules";
 import { Tls } from "./pages/Tls";
-import { ActionsContext, type Actions } from "./actions";
+import { ActionsContext, Plain, usePlainSetting, type Actions } from "./actions";
 import { alertsAt, canReplay, frameAt, incidentWindow, Scrubber, useReplayClock, type Replay } from "./replay";
 import { AlertBody, Bars, SevBadge, Strip, TrafficChart } from "./ui";
 
@@ -46,6 +46,7 @@ function NetworkNow({ live }: { live: Live }) {
       <div>
         <h2 className="text-lg font-semibold">The network right now</h2>
         <p className="mt-1 text-sm text-muted">{s?.state.mode === "capture" ? "Live capture from a network interface." : "A simulated office: 24 workstations and five servers. Click any dot to inspect it."}</p>
+        <Plain className="mt-3">This is a sonar screen for a network. Each dot is a computer, each line is two of them talking. The busier the line, the more data. When something looks like an attack, its dots and line turn coral and a strip appears on the left.</Plain>
       </div>
       <section>
         <h3 className="label">Busiest hosts</h3>
@@ -69,6 +70,7 @@ function NetworkNow({ live }: { live: Live }) {
       </section>
       <section>
         <h3 className="label">Busiest ports</h3>
+        <Plain className="mt-1.5">A port is a numbered door on a computer: 443 is websites, 53 is the phone book (DNS), 22 is remote login.</Plain>
         <div className="mt-2">
           <Bars rows={(s?.topPorts ?? []).slice(0, 5).map((p) => ({ label: `:${p.port}`, value: p.packets, hint: num(p.packets) }))} />
         </div>
@@ -165,7 +167,8 @@ function Shell() {
     },
     [frames, navigate],
   );
-  const actions = useMemo<Actions>(() => ({ replay: replayAlert, canReplay: (a) => canReplay(a, frames) }), [replayAlert, frames]);
+  const [plain, setPlain] = usePlainSetting();
+  const actions = useMemo<Actions>(() => ({ replay: replayAlert, canReplay: (a) => canReplay(a, frames), plain, setPlain }), [replayAlert, frames, plain, setPlain]);
   const frame = replay ? frameAt(frames, replay.t) : undefined;
   const scopeAlerts = replay ? alertsAt(live.alerts, replay.t) : live.alerts;
   const last = s?.series.slice(-5) ?? [];
@@ -189,6 +192,7 @@ function Shell() {
         else rewind();
       }
       if ((e.key === "l" || e.key === "L") && replay) setReplay(null);
+      if (e.key === "e" || e.key === "E") setPlain(!plain);
       if (e.key === " " && replay && !(el.closest("button") || el.getAttribute("role") === "slider")) {
         e.preventDefault();
         setReplay({ ...replay, playing: !replay.playing });
@@ -198,7 +202,7 @@ function Shell() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [sheet, navigate, replay, rewind]);
+  }, [sheet, navigate, replay, rewind, plain, setPlain]);
 
   async function launch() {
     setMsg(null);
@@ -233,8 +237,9 @@ function Shell() {
     <div className={`relative h-dvh overflow-hidden ${replay ? "replaying" : ""}`}>
       <NetworkMap graph={replay ? frame?.graph : s?.graph} alerts={scopeAlerts} selection={sel} onSelect={pick} tape={replay ? replay.t : undefined} />
 
-      {/* Vital signs */}
-      <div className="panel pointer-events-auto absolute left-3 top-3 w-[min(19rem,calc(100%-1.5rem))] p-3">
+      {/* Vital signs, with the strip feed under them */}
+      <div className="pointer-events-none absolute left-3 top-3 flex max-h-[calc(100dvh-9rem)] w-[min(19rem,calc(100%-1.5rem))] flex-col gap-2">
+      <div className="panel pointer-events-auto shrink-0 p-3">
         <div className="flex items-center gap-2.5">
           <img src="/favicon.svg" alt="" className="h-7 w-7" />
           <Link to="/" className="display text-[1.1rem] font-bold">
@@ -260,16 +265,19 @@ function Shell() {
             </div>
           ))}
         </dl>
+        <Plain className="mt-2">Packets are the small envelopes all network data travels in. A flow is one conversation between two computers. Every alert is something that looked like an attack.</Plain>
       </div>
 
       {/* Alert feed */}
-      <div className="pointer-events-none absolute left-3 top-[9.5rem] hidden w-[19rem] space-y-2 md:block">
+      <div className="hidden min-h-0 space-y-2 overflow-hidden md:block">
         {scopeAlerts.slice(0, 5).map((a) => (
           <div key={a.id} className="panel pointer-events-auto overflow-hidden !rounded-[10px]">
             <Strip a={a} compact fresh={live.isFresh(a.id)} onOpen={(x) => pick({ kind: "alert", alert: x })} route={`${ROLE[hostOf(a.src)] ?? a.src} → ${ROLE[hostOf(a.dst)] ?? a.dst}`} />
           </div>
         ))}
+        <Plain className="panel pointer-events-auto !rounded-[10px]">Each strip is one alert, styled like an air-traffic flight strip: the attack's code name, how serious it is, who attacked whom, and how many times.</Plain>
         {!live.alerts.length && live.connected && <div className="panel pointer-events-auto px-3 py-2.5 text-sm text-muted">No alerts yet. Launch an attack from the bar below to see detection happen.</div>}
+      </div>
       </div>
 
       {/* Tool dock */}
@@ -284,6 +292,10 @@ function Shell() {
         <button className={`flex items-center gap-2 rounded-[13px] px-2.5 py-2 text-[13px] font-semibold ${replay ? "bg-warn text-[#1d1300]" : "text-warn hover:bg-panel-2"}`} onClick={() => (replay ? setReplay(null) : rewind())} title="Rewind the scope (R)" aria-pressed={Boolean(replay)} disabled={frames.length < 2}>
           <Icon d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5M12 8v4l3 2" />
           <span className="hidden xl:inline">Rewind</span>
+        </button>
+        <button className={`flex items-center gap-2 rounded-[13px] px-2.5 py-2 text-[13px] font-semibold ${plain ? "bg-accent text-[var(--accent-ink)]" : "text-muted hover:bg-panel-2 hover:text-ink"}`} onClick={() => setPlain(!plain)} title="Explain like I'm new (E)" aria-pressed={plain} aria-label="Explain like I'm new">
+          <Icon d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z" />
+          <span className="hidden xl:inline">Explain</span>
         </button>
       </nav>
 

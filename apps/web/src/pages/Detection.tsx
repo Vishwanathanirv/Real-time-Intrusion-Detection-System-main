@@ -1,3 +1,4 @@
+import { Plain } from "../actions";
 import { usePoll } from "../lib";
 import nslKdd from "../../../../reports/nsl-kdd.json";
 import { Kpi, Panel } from "../ui";
@@ -34,6 +35,7 @@ export function Detection() {
         <p className="mt-2 max-w-2xl text-[0.95rem] text-muted">
           Measured, not claimed. A labelled replay of office traffic with scheduled attacks runs through the sensor, and each detector is scored on whether and how fast it fired, and on false alerts during clean traffic.
         </p>
+        <Plain className="mt-3 max-w-2xl">This is the scorecard. Attacks with known answers were replayed, and each detector was timed on how quickly it noticed. False alerts are the times it cried wolf.</Plain>
       </div>
       {error && <p className="text-sm text-muted">{error}</p>}
       {data && totals && (

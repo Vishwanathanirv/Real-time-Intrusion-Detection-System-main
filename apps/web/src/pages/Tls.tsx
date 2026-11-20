@@ -1,3 +1,4 @@
+import { Plain } from "../actions";
 import { usePoll } from "../lib";
 import { Kpi, Panel } from "../ui";
 
@@ -73,6 +74,7 @@ export function Tls() {
           Encryption hides what a program says, but not how it says hello. Every TLS connection starts with a ClientHello whose cipher suites, extensions and signature algorithms are chosen by the software, not the user. PacketEye turns each one
           into a JA4 fingerprint. Browsers and system services are shared by many machines; a fingerprint used by one machine only is worth a look.
         </p>
+        <Plain className="mt-3 max-w-2xl">When an app opens an encrypted connection it says hello in its own particular way. That hello becomes a fingerprint (JA4). Browsers share theirs with many computers; malware usually brings its own.</Plain>
       </div>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label="Distinct clients" value={clients.length} />

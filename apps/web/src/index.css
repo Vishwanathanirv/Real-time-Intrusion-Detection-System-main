@@ -158,6 +158,34 @@ body {
   .btn-warn:hover:not(:disabled) {
     border-color: var(--warn);
   }
+  /* Explain like I'm new: notes in plain words, in a voice of their own. */
+  .plain {
+    display: flex;
+    gap: 0.55rem;
+    align-items: flex-start;
+    padding: 0.55rem 0.7rem;
+    border-radius: 10px;
+    border: 1px dashed color-mix(in oklab, var(--accent) 45%, var(--line));
+    background: color-mix(in oklab, var(--accent) 6%, transparent);
+    font-size: 0.84rem;
+    line-height: 1.5;
+    color: var(--ink);
+    font-stretch: 96%;
+    animation: rise 0.35s var(--spring);
+  }
+  .plain-mark {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 1.15rem;
+    height: 1.15rem;
+    margin-top: 0.1rem;
+    border-radius: 99px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-size: 0.72rem;
+    font-weight: 800;
+  }
   /* Callsign chips: pick one attack. */
   .chip {
     display: inline-flex;
@@ -474,6 +502,7 @@ body {
   .alarm,
   .row-new,
   .rise,
+  .plain,
   .skeleton {
     animation: none;
   }

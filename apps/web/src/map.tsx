@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent, type WheelEvent as RWheelEvent } from "react";
+import { useActions } from "./actions";
 import { bytes, type Alert, type Stats } from "./lib";
 
 /** Names for the simulated office's servers. Real captures just show addresses. */
@@ -73,6 +74,7 @@ export function NetworkMap({ graph, alerts, selection, onSelect, tape }: { graph
   const svg = useRef<SVGSVGElement>(null);
   const [view, setView] = useState({ x: 0, y: 0, k: 0.82 });
   const [hover, setHover] = useState<string | null>(null);
+  const { plain } = useActions();
   const drag = useRef<{ x: number; y: number; vx: number; vy: number; moved: boolean } | null>(null);
 
   const open = alerts.filter((a) => (a.status ?? "open") === "open");
@@ -235,11 +237,18 @@ export function NetworkMap({ graph, alerts, selection, onSelect, tape }: { graph
               REPLAY · {new Date(tape).toLocaleTimeString("en-IN", { hour12: false })}
             </text>
           )}
-          {[
-            [CORE, "CORE · servers"],
-            [OFFICE, "OFFICE · workstations"],
-            [EDGE, "EDGE · internet"],
-          ].map(([r, t]) => (
+          {(plain
+            ? [
+                [CORE, "CORE · the office's shared servers"],
+                [OFFICE, "OFFICE · people's computers"],
+                [EDGE, "EDGE · anywhere on the internet"],
+              ]
+            : [
+                [CORE, "CORE · servers"],
+                [OFFICE, "OFFICE · workstations"],
+                [EDGE, "EDGE · internet"],
+              ]
+          ).map(([r, t]) => (
             <text key={t} x={6} y={-(r as number) - 6} fontSize={12} letterSpacing="0.08em" fontWeight={600} fill="var(--faint)" paintOrder="stroke" stroke="var(--bg)" strokeWidth={3}>
               {t}
             </text>

@@ -139,3 +139,22 @@ test("the what-if lab shows a slowed-down attack slipping through, then runs it 
   await page.getByRole("button", { name: "Run it on the live scope" }).click();
   await expect(page.getByText(/launched on the live scope, 12× slower/)).toBeVisible();
 });
+
+test("explain-like-I'm-new mode adds plain words everywhere and is remembered", async ({ page }) => {
+  await page.goto("/");
+  const toggle = page.getByRole("button", { name: "Explain like I'm new" });
+  await expect(toggle).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByText(/This is a sonar screen for a network/)).toHaveCount(0);
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByText(/This is a sonar screen for a network/)).toBeVisible();
+  await expect(page.getByText("OFFICE · people's computers")).toBeVisible();
+  const strip = page.getByRole("button", { name: /Port scan/ }).first();
+  await expect(strip).toBeVisible({ timeout: 30_000 });
+  await strip.click();
+  await expect(page.getByRole("complementary", { name: "Inspector" })).toContainText("Someone is trying every door handle");
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Explain like I'm new" })).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("e");
+  await expect(page.getByText(/This is a sonar screen for a network/)).toHaveCount(0);
+});

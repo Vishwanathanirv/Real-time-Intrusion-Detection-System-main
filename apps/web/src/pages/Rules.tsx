@@ -1,3 +1,4 @@
+import { Plain } from "../actions";
 import { useEffect, useState } from "react";
 import { api, usePoll } from "../lib";
 import { Panel, SevBadge } from "../ui";
@@ -47,6 +48,7 @@ export function Rules() {
           Signatures in Suricata syntax run beside the behavioural detectors, so a SOC can add its own detections in a language it already knows. Match on addresses, ports and TCP flags, and on DNS names, TLS server names and JA4 fingerprints with{" "}
           <code className="font-mono text-xs">dns.query</code>, <code className="font-mono text-xs">tls.sni</code> and <code className="font-mono text-xs">ja4.hash</code>. Thresholds work the same way as in Suricata.
         </p>
+        <Plain className="mt-3 max-w-2xl">Rules are hand-written tripwires, in the same language the popular Suricata sensor uses: 'if you see this, raise an alert'.</Plain>
       </div>
       <div className="grid gap-5 xl:grid-cols-[1.25fr_1fr]">
         <Panel
