@@ -11,6 +11,7 @@ import { Analyze } from "./pages/Analyze";
 import { Detection } from "./pages/Detection";
 import { Lab } from "./pages/Lab";
 import { Report } from "./pages/Report";
+import { How } from "./pages/How";
 import { buildReport, encodeReport } from "./report-codec";
 import { Rules } from "./pages/Rules";
 import { Tls } from "./pages/Tls";
@@ -196,6 +197,7 @@ function Shell() {
       }
       if ((e.key === "l" || e.key === "L") && replay) setReplay(null);
       if (e.key === "e" || e.key === "E") setPlain(!plain);
+      if (e.key === "h" || e.key === "H") navigate("/how");
       if (e.key === " " && replay && !(el.closest("button") || el.getAttribute("role") === "slider")) {
         e.preventDefault();
         setReplay({ ...replay, playing: !replay.playing });
@@ -296,6 +298,10 @@ function Shell() {
           <Icon d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5M12 8v4l3 2" />
           <span className="hidden xl:inline">Rewind</span>
         </button>
+        <Link to="/how" className="flex items-center gap-2 rounded-[13px] px-2.5 py-2 text-[13px] font-semibold text-muted hover:bg-panel-2 hover:text-ink" title="How it works (H)" aria-label="How it works">
+          <Icon d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM12 11.5v1" />
+          <span className="hidden xl:inline">How it works</span>
+        </Link>
         <button className={`flex items-center gap-2 rounded-[13px] px-2.5 py-2 text-[13px] font-semibold ${plain ? "bg-accent text-[var(--accent-ink)]" : "text-muted hover:bg-panel-2 hover:text-ink"}`} onClick={() => setPlain(!plain)} title="Explain like I'm new (E)" aria-pressed={plain} aria-label="Explain like I'm new">
           <Icon d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z" />
           <span className="hidden xl:inline">Explain</span>
@@ -398,6 +404,7 @@ createRoot(document.getElementById("root")!).render(
     <BrowserRouter>
       <Routes>
         <Route path="/report" element={<Report />} />
+        <Route path="/how" element={<How />} />
         <Route path="*" element={<Shell />} />
       </Routes>
     </BrowserRouter>

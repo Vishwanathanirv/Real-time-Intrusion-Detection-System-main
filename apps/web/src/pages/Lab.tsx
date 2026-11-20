@@ -14,7 +14,7 @@ function useWhatIf(kind: AttackKind, stretch: number, threshold: number) {
   const [result, setResult] = useState<WhatIfResult | null>(null);
   const [busy, setBusy] = useState(true);
   useEffect(() => {
-    const w = new Worker(new URL("../lab.worker.ts", import.meta.url), { type: "module" });
+    const w = new Worker(new URL("../core.worker.ts", import.meta.url), { type: "module" });
     w.onmessage = (e: MessageEvent<{ id: number; result: WhatIfResult }>) => {
       if (e.data.id !== seq.current) return;
       setResult(e.data.result);
@@ -26,7 +26,7 @@ function useWhatIf(kind: AttackKind, stretch: number, threshold: number) {
   useEffect(() => {
     setBusy(true);
     const id = ++seq.current;
-    const t = setTimeout(() => worker.current?.postMessage({ id, input: { kind, stretch, threshold } }), 220);
+    const t = setTimeout(() => worker.current?.postMessage({ id, op: "whatif", input: { kind, stretch, threshold } }), 220);
     return () => clearTimeout(t);
   }, [kind, stretch, threshold]);
   return { result, busy };

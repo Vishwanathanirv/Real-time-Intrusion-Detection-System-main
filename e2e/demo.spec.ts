@@ -178,3 +178,28 @@ test("an alert becomes a shareable report link that opens on its own", async ({ 
   await page.goto("/report#broken");
   await expect(page.getByRole("heading", { name: "No report here" })).toBeVisible();
 });
+
+test("how it works follows one real packet from the wire to the alert board", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("link", { name: "How it works" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Capture" })).toBeVisible();
+  await expect(page.getByText(/PacketEye never reads what.s inside a message/)).toBeVisible();
+  await expect(page.getByLabel(/^The first 96 of \d+ bytes of the frame/)).toBeVisible({ timeout: 30_000 });
+  await page.getByRole("button", { name: "Next stage" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Decode" })).toBeVisible();
+  await expect(page.getByText(/^t13i\d+_/)).toBeVisible();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByRole("heading", { level: 1, name: "Flow" })).toBeVisible();
+  await expect(page.getByText("log_bytes")).toBeVisible();
+  // Each ring on the scope is a stage you can jump to (here with the keyboard).
+  await page.getByRole("button", { name: "Stage 4: Detect" }).press("Enter");
+  await expect(page.getByRole("heading", { level: 1, name: "Detect" })).toBeVisible();
+  await expect(page.getByText("Fired", { exact: true })).toBeVisible();
+  await expect(page.getByText("Matched", { exact: true })).toBeVisible();
+  await expect(page.getByRole("meter", { name: "Anomaly score" })).toBeVisible();
+  await page.keyboard.press("5");
+  await expect(page.getByRole("button", { name: /Rare TLS client/ })).toBeVisible();
+  await page.getByRole("button", { name: "Launch this implant on the live scope" }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole("img", { name: /Network map/ })).toBeVisible();
+});
