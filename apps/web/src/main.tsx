@@ -4,16 +4,16 @@ import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate }
 import "@fontsource-variable/hubot-sans/wdth.css";
 import "@fontsource-variable/martian-mono";
 import "./index.css";
-import { ago, api, bytes, num, useLive, usePoll, type Alert } from "./lib";
+import { api, bytes, num, useLive, usePoll, type Alert } from "./lib";
 import { hostOf, NetworkMap, ROLE, type Selection } from "./map";
 import { Alerts } from "./pages/Alerts";
 import { Analyze } from "./pages/Analyze";
 import { Detection } from "./pages/Detection";
 import { Rules } from "./pages/Rules";
 import { Tls } from "./pages/Tls";
-import { AlertBody, Bars, SevBadge, TrafficChart } from "./ui";
+import { AlertBody, Bars, SevBadge, Strip, TrafficChart } from "./ui";
 
-/** The tool dock. Each tool opens as a sheet floating over the live map. */
+/** The tool dock. Each tool opens as a console over the live scope, which keeps sweeping behind it. */
 const TOOLS: { to: string; t: string; icon: string }[] = [
   { to: "/", t: "Map", icon: "M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14" },
   { to: "/alerts", t: "Alerts", icon: "M12 3l9 16H3zM12 10v4M12 17h.01" },
@@ -233,39 +233,29 @@ function Shell() {
             {!live.connected ? "Connecting" : s?.state.running === false ? "Paused" : "Live"}
           </span>
         </div>
-        <div className="mt-3 grid grid-cols-4 gap-1.5 text-center">
+        <dl className="telemetry mt-3" aria-label="Vital signs">
           {[
-            ["pkt/s", num(pps)],
-            ["per s", bytes(bps)],
-            ["flows", s ? num(s.activeFlows) : "–"],
-            ["alerts", String(open.length)],
+            ["PKT/S", num(pps)],
+            ["BW/S", bytes(bps)],
+            ["FLOWS", s ? num(s.activeFlows) : "–"],
+            ["ALERTS", String(open.length)],
           ].map(([k, v], i) => (
-            <div key={k} className="screen px-1 py-1.5">
-              <div className="lcd text-[12.5px] font-medium" style={i === 3 && open.length ? { color: "var(--bad)" } : undefined}>
+            <div key={k}>
+              <dt>{k}</dt>
+              <dd className="lcd" style={i === 3 && open.length ? { color: "var(--bad)" } : undefined}>
                 {v}
-              </div>
-              <div className="text-[10.5px] text-faint">{k}</div>
+              </dd>
             </div>
           ))}
-        </div>
+        </dl>
       </div>
 
       {/* Alert feed */}
       <div className="pointer-events-none absolute left-3 top-[9.5rem] hidden w-[19rem] space-y-2 md:block">
         {live.alerts.slice(0, 5).map((a) => (
-          <button key={a.id} onClick={() => pick({ kind: "alert", alert: a })} className={`panel pointer-events-auto block w-full px-3 py-2.5 text-left ${live.isFresh(a.id) ? "rise" : ""} ${(a.status ?? "open") !== "open" ? "opacity-60" : ""}`}>
-            <div className="flex items-center justify-between gap-2">
-              <SevBadge s={a.severity} />
-              <span className="text-[11px] text-faint">
-                {a.count > 1 ? `×${a.count}, ` : ""}
-                {ago(a.lastSeen)}
-              </span>
-            </div>
-            <div className="mt-1 truncate text-[13.5px] font-medium">{a.title}</div>
-            <div className="lcd truncate text-[10.5px] text-faint">
-              {ROLE[hostOf(a.src)] ?? a.src} → {ROLE[hostOf(a.dst)] ?? a.dst}
-            </div>
-          </button>
+          <div key={a.id} className="panel pointer-events-auto overflow-hidden !rounded-[10px]">
+            <Strip a={a} compact fresh={live.isFresh(a.id)} onOpen={(x) => pick({ kind: "alert", alert: x })} route={`${ROLE[hostOf(a.src)] ?? a.src} → ${ROLE[hostOf(a.dst)] ?? a.dst}`} />
+          </div>
         ))}
         {!live.alerts.length && live.connected && <div className="panel pointer-events-auto px-3 py-2.5 text-sm text-muted">No alerts yet. Launch an attack from the bar below to see detection happen.</div>}
       </div>
@@ -287,7 +277,7 @@ function Shell() {
       {sheet ? null : inspector ? (
         <aside className="panel scroll-y absolute bottom-[8.5rem] right-3 top-3 z-10 hidden w-[23rem] p-4 md:block lg:bottom-[6.75rem]" aria-label="Inspector">
           <div className="mb-3 flex items-center justify-between">
-            <span className="silk">{sel?.kind === "alert" ? "Alert" : sel?.kind === "host" ? "Host" : "Overview"}</span>
+            <span className="silk">{sel?.kind === "alert" ? "Alert" : sel?.kind === "host" ? "Host" : "Scope readout"}</span>
             <div className="flex gap-1">
               {sel && (
                 <button className="btn h-7 px-2 text-xs" onClick={() => setSel(null)}>
@@ -345,12 +335,12 @@ function Shell() {
 
       {/* A tool's sheet, floating over the map */}
       {sheet && (
-        <section className="panel rise scroll-y absolute inset-x-2 bottom-[4.5rem] top-[8.5rem] z-20 !bg-panel-solid p-5 md:bottom-3 md:left-[20.5rem] md:right-3 md:top-[4.25rem] lg:p-7" aria-label={tool.t}>
+        <section className="panel console rise scroll-y absolute inset-x-2 bottom-[4.5rem] top-[8.5rem] z-20 p-5 md:bottom-3 md:left-[20.5rem] md:right-3 md:top-[4.25rem] lg:p-7" aria-label={tool.t}>
           <button className="btn absolute right-4 top-4 h-8 px-2.5" onClick={() => navigate("/")} aria-label="Close and go back to the map">
             ✕
           </button>
           <Routes>
-            <Route path="/alerts" element={<Alerts />} />
+            <Route path="/alerts" element={<Alerts onOpen={(a) => { pick({ kind: "alert", alert: a }); navigate("/"); }} />} />
             <Route path="/analyze" element={<Analyze />} />
             <Route path="/tls" element={<Tls />} />
             <Route path="/rules" element={<Rules />} />

@@ -21,6 +21,21 @@ const hash = (s: string) => {
 const ipNum = (ip: string) => ip.split(".").reduce((n, o) => n * 256 + Number(o), 0);
 const isServer = (n: { ip: string; internal: boolean }) => n.internal && Number(n.ip.split(".")[3] ?? 0) < 100;
 
+/** Range rings of the scope: core (servers), office (workstations), edge (the internet). */
+const CORE = 120;
+const OFFICE = 310;
+const EDGE = 500;
+const SCOPE = 560;
+
+/** Bearing ticks every 5 degrees around the scope, longer every 30. */
+const TICKS = Array.from({ length: 72 }, (_, i) => i * 5);
+/** The sweep's afterglow: thin wedges that fade behind the leading edge. */
+const WEDGES = Array.from({ length: 10 }, (_, i) => {
+  const a0 = (-(i + 1) * 4 * Math.PI) / 180;
+  const a1 = (-i * 4 * Math.PI) / 180;
+  return { d: `M0 0 L${Math.cos(a0) * SCOPE} ${Math.sin(a0) * SCOPE} A${SCOPE} ${SCOPE} 0 0 1 ${Math.cos(a1) * SCOPE} ${Math.sin(a1) * SCOPE} Z`, o: 0.16 * (1 - i / 10) };
+});
+
 /** Spreads the hosts of one ring evenly, in address order. */
 function ring(ips: string[], ip: string, rx: number, ry: number, turn = 0) {
   const i = ips.indexOf(ip);
@@ -29,11 +44,24 @@ function ring(ips: string[], ip: string, rx: number, ry: number, turn = 0) {
 }
 
 export function place(n: Graph["nodes"][number], seen: { servers: string[]; workstations: string[] }): { x: number; y: number } {
-  if (isServer(n)) return ring(seen.servers, n.ip, 120, 120);
-  if (n.internal) return ring(seen.workstations, n.ip, 310, 300, 0.12);
+  if (isServer(n)) return ring(seen.servers, n.ip, CORE, CORE);
+  if (n.internal) return ring(seen.workstations, n.ip, OFFICE, OFFICE, 0.12);
   const a = hash(n.ip) * Math.PI * 2;
-  return { x: Math.cos(a) * 540, y: Math.sin(a) * 440 };
+  return { x: Math.cos(a) * EDGE, y: Math.sin(a) * EDGE };
 }
+
+/** Four corner brackets around a contact the scope has locked onto. */
+const lockOn = (h: number) => {
+  const l = h * 0.45;
+  return [
+    [-1, -1],
+    [1, -1],
+    [1, 1],
+    [-1, 1],
+  ]
+    .map(([sx, sy]) => `M${sx * h} ${sy * (h - l)} L${sx * h} ${sy * h} L${sx * (h - l)} ${sy * h}`)
+    .join(" ");
+};
 
 /** Alert endpoints can carry a port ("10.0.0.10:22"); the map works with hosts. */
 export const hostOf = (addr: string) => (/^\d+\.\d+\.\d+\.\d+:\d+$/.test(addr) ? addr.slice(0, addr.lastIndexOf(":")) : addr);
@@ -129,7 +157,7 @@ export function NetworkMap({ graph, alerts, selection, onSelect }: { graph: Grap
     const right = wide ? 390 : 0;
     const freeW = Math.max(300, w - left - right);
     const freeH = Math.max(300, h - (wide ? 170 : 260));
-    const k = Math.max(0.28, Math.min(1.1, freeW / 1150, freeH / 960));
+    const k = Math.max(0.28, Math.min(1.1, freeW / 1200, freeH / 1200));
     return { x: (left - right) / 2 / k, y: (wide ? -10 : -40) / k, k };
   };
   useEffect(() => {
@@ -166,21 +194,51 @@ export function NetworkMap({ graph, alerts, selection, onSelect }: { graph: Grap
         }}
         onPointerLeave={() => (drag.current = null)}
       >
+        <defs>
+          <radialGradient id="scope-glow">
+            <stop offset="0" stopColor="var(--accent)" stopOpacity="0.09" />
+            <stop offset="0.75" stopColor="var(--accent)" stopOpacity="0.03" />
+            <stop offset="1" stopColor="var(--accent)" stopOpacity="0.07" />
+          </radialGradient>
+        </defs>
         <g style={{ transform: `translate(50%, 50%) scale(${view.k}) translate(${view.x}px, ${view.y}px)`, transition: drag.current ? "none" : "transform 0.15s ease-out" }}>
-          {/* Ring guides: servers, workstations, internet. */}
-          {[120, 310].map((r) => (
-            <circle key={r} r={r} fill="none" stroke="var(--line)" strokeDasharray="2 6" />
+          {/* The scope: range rings, bearing ticks, crosshair and the sweep. */}
+          <circle r={SCOPE} fill="url(#scope-glow)" stroke="var(--line)" />
+          <line x1={-SCOPE} x2={SCOPE} y1={0} y2={0} stroke="var(--line)" strokeDasharray="1 7" />
+          <line y1={-SCOPE} y2={SCOPE} x1={0} x2={0} stroke="var(--line)" strokeDasharray="1 7" />
+          {[CORE, OFFICE, EDGE].map((r) => (
+            <circle key={r} r={r} fill="none" stroke="var(--faint)" strokeOpacity={0.45} strokeWidth={1.2} />
           ))}
-          <ellipse rx={540} ry={470} fill="none" stroke="var(--line)" strokeDasharray="2 6" />
-          <text y={-128} textAnchor="middle" fontSize={11} fill="var(--faint)">
-            servers
-          </text>
-          <text y={-318} textAnchor="middle" fontSize={11} fill="var(--faint)">
-            workstations
-          </text>
-          <text y={-478} textAnchor="middle" fontSize={11} fill="var(--faint)">
-            internet
-          </text>
+          {TICKS.map((deg) => {
+            const a = ((deg - 90) * Math.PI) / 180;
+            const long = deg % 30 === 0;
+            const r0 = SCOPE - (long ? 16 : 7);
+            return (
+              <g key={deg}>
+                <line x1={Math.cos(a) * r0} y1={Math.sin(a) * r0} x2={Math.cos(a) * SCOPE} y2={Math.sin(a) * SCOPE} stroke={long ? "var(--muted)" : "var(--line)"} strokeWidth={long ? 1.4 : 1} />
+                {long && (
+                  <text x={Math.cos(a) * (SCOPE + 20)} y={Math.sin(a) * (SCOPE + 20) + 4} textAnchor="middle" fontSize={11} className="lcd" fill="var(--faint)">
+                    {String(deg).padStart(3, "0")}
+                  </text>
+                )}
+              </g>
+            );
+          })}
+          <g className="sweep" aria-hidden>
+            {WEDGES.map((w, i) => (
+              <path key={i} d={w.d} fill="var(--accent)" fillOpacity={w.o} />
+            ))}
+            <line x1={0} y1={0} x2={SCOPE} y2={0} stroke="var(--accent)" strokeOpacity={0.55} strokeWidth={1.5} />
+          </g>
+          {[
+            [CORE, "CORE · servers"],
+            [OFFICE, "OFFICE · workstations"],
+            [EDGE, "EDGE · internet"],
+          ].map(([r, t]) => (
+            <text key={t} x={6} y={-(r as number) - 6} fontSize={12} letterSpacing="0.08em" fontWeight={600} fill="var(--faint)" paintOrder="stroke" stroke="var(--bg)" strokeWidth={3}>
+              {t}
+            </text>
+          ))}
 
           {full.edges.map((e, rank) => {
             const a = byIp.get(e.src);
@@ -222,6 +280,7 @@ export function NetworkMap({ graph, alerts, selection, onSelect }: { graph: Grap
               >
                 {sev && (sev === "high" || sev === "critical") && <circle r={n.r} fill="none" stroke="var(--bad)" strokeWidth={2} className="alarm" style={{ ["--r0" as string]: `${n.r}px` }} />}
                 <circle r={n.r + (sel ? 5 : 0)} fill="var(--bg)" stroke={sel ? "var(--accent)" : "none"} strokeWidth={2} />
+                {sel && <path d={lockOn(n.r + 11)} fill="none" stroke={sev ? "var(--bad)" : "var(--accent)"} strokeWidth={2} strokeLinecap="square" aria-hidden />}
                 <circle r={n.r} fill={fill} />
                 {(ROLE[n.ip] || sel || sev || hover === n.ip) && (
                   <text y={n.r + 14} textAnchor="middle" fontSize={11} fontWeight={600} fill="var(--ink)" paintOrder="stroke" stroke="var(--bg)" strokeWidth={4}>

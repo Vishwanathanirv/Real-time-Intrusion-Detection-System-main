@@ -1,4 +1,5 @@
 import { usePoll } from "../lib";
+import nslKdd from "../../../../reports/nsl-kdd.json";
 import { Kpi, Panel } from "../ui";
 
 type Evaluation = {
@@ -76,6 +77,53 @@ export function Detection() {
           </Panel>
         </>
       )}
+      <PublicBenchmark />
     </div>
+  );
+}
+
+const CLASS_NAMES: Record<string, string> = { normal: "Normal", dos: "DoS", probe: "Probe", r2l: "Remote to local", u2r: "User to root" };
+const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
+
+/** NSL-KDD results from `npm run benchmark`, bundled with the app so they match the published README. */
+function PublicBenchmark() {
+  const r = nslKdd;
+  const iso = r.isolationForest;
+  return (
+    <Panel title="Public dataset: NSL-KDD, held-out test set">
+      <p className="px-4 text-sm text-muted">
+        Trained on {r.trainRecords.toLocaleString("en-IN")} records of KDDTrain+, scored on {r.testRecords.toLocaleString("en-IN")} records of KDDTest+. {r.unseenAttackRecords.toLocaleString("en-IN")} of those come from {r.unseenAttackTypes.length} attack types never seen in training.
+      </p>
+      <div className="mt-2 overflow-x-auto">
+        <table className="w-full text-sm">
+          <caption className="sr-only">Random forest, per class, on KDDTest+</caption>
+          <thead>
+            <tr className="label text-left">
+              <th className="px-4 py-2 font-medium">Class</th>
+              <th className="px-2 py-2 text-right font-medium">Records</th>
+              <th className="px-2 py-2 text-right font-medium">Precision</th>
+              <th className="px-2 py-2 text-right font-medium">Recall</th>
+              <th className="px-4 py-2 text-right font-medium">False-positive rate</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(r.randomForest.perClass).map(([k, m]) => (
+              <tr key={k} className="border-t border-line">
+                <td className="px-4 py-2.5 font-medium">{CLASS_NAMES[k] ?? k}</td>
+                <td className="px-2 py-2.5 text-right font-mono text-muted">{m.support.toLocaleString("en-IN")}</td>
+                <td className="px-2 py-2.5 text-right font-mono">{pct(m.precision)}</td>
+                <td className="px-2 py-2.5 text-right font-mono" style={{ color: m.recall < 0.5 ? "var(--warn)" : undefined }}>
+                  {pct(m.recall)}
+                </td>
+                <td className="px-4 py-2.5 text-right font-mono text-muted">{pct(m.fpr)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="px-4 pb-4 pt-2 text-xs leading-relaxed text-faint">
+        Random forest over the 41 connection features: accuracy {pct(r.randomForest.accuracy)}. The sensor&apos;s isolation forest, trained only on normal records, reaches {pct(iso.precision)} precision and {pct(iso.recall)} recall at a {pct(iso.fpr)} false-positive rate. Remote-to-local and user-to-root attacks look like ordinary sessions at the connection level, which is why the rules, brute-force counting and JA4 sit alongside the models. NSL-KDD comes from the Canadian Institute for Cybersecurity (UNB), for research use; reproduce with <code className="font-mono">npm run benchmark</code>.
+      </p>
+    </Panel>
   );
 }

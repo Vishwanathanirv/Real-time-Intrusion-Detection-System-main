@@ -54,3 +54,44 @@ test("a broken rule is rejected with its line number", async ({ page }) => {
   await page.getByRole("button", { name: "Apply" }).click();
   await expect(page.getByText(/line 1:/)).toBeVisible();
 });
+
+test("picking a strip on the alert board locks the scope onto that alert", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByText("Live", { exact: true })).toBeVisible({ timeout: 30_000 });
+  await page.getByLabel("Attack to simulate").selectOption("port_scan");
+  await page.getByRole("button", { name: "Launch" }).click();
+  await page.keyboard.press("2");
+  await expect(page.getByRole("heading", { level: 1, name: "Alerts" })).toBeVisible();
+  const strip = page.getByRole("list", { name: "open alerts" }).getByRole("button", { name: /Port scan/ }).first();
+  await expect(strip).toBeVisible({ timeout: 30_000 });
+  await expect(strip).toContainText("T1046");
+  await strip.click();
+  await expect(page).toHaveURL(/\/$/);
+  const inspector = page.getByRole("complementary", { name: "Inspector" });
+  await expect(inspector).toContainText("T1046");
+  await expect(inspector).toContainText("What to do");
+});
+
+test("coverage shows the public NSL-KDD benchmark per class", async ({ page }) => {
+  await page.goto("/detection");
+  const panel = page.getByRole("region", { name: "Coverage" });
+  await expect(panel.getByText("Public dataset: NSL-KDD, held-out test set")).toBeVisible();
+  for (const c of ["Normal", "DoS", "Probe", "Remote to local", "User to root"]) await expect(panel.getByRole("cell", { name: c, exact: true })).toBeVisible();
+});
+
+test.describe("with reduced motion", () => {
+  test.use({ reducedMotion: "reduce" });
+  test("the sonar sweep is switched off", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByRole("img", { name: /Network map/ })).toBeVisible();
+    await expect(page.locator(".sweep")).toBeHidden();
+  });
+});
+
+test("the scope works on a phone without horizontal scrolling", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await expect(page.getByRole("img", { name: /Network map/ })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Tools" })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});

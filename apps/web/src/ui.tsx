@@ -13,11 +13,11 @@ export function SevBadge({ s }: { s: Severity }) {
   );
 }
 
-/** A figure with its name above it. */
+/** An instrument readout: a figure under a tick scale, like a dial on the scope console. */
 export function Kpi({ label, value, sub, tone }: { label: string; value: ReactNode; sub?: ReactNode; tone?: string }) {
   return (
-    <div className="screen px-3 py-2.5">
-      <div className="silk">{label}</div>
+    <div className="readout">
+      <div className="readout-label">{label}</div>
       <div className="lcd mt-1 whitespace-nowrap text-[1.15rem] font-medium leading-none" style={tone === "bad" ? { color: "var(--bad)" } : tone === "accent" ? { color: "var(--accent)" } : undefined}>
         {value}
       </div>
@@ -89,22 +89,41 @@ export function Bars({ rows }: { rows: { label: ReactNode; value: number; hint?:
   );
 }
 
-export function AlertRow({ a, fresh, onOpen, absolute }: { a: Alert; fresh?: boolean; onOpen: (a: Alert) => void; absolute?: boolean }) {
+/**
+ * An alert as an air-traffic flight strip: a severity bar, the ATT&CK technique as its callsign,
+ * the route it is flying, and its count and age in their own boxes on the right.
+ */
+export function Strip({ a, fresh, onOpen, absolute, route, compact }: { a: Alert; fresh?: boolean; onOpen: (a: Alert) => void; absolute?: boolean; route?: string; compact?: boolean }) {
+  const handled = (a.status ?? "open") !== "open";
+  return (
+    <button
+      onClick={() => onOpen(a)}
+      className={`strip ${fresh ? "row-new" : ""} ${handled ? "strip-handled" : ""}`}
+      style={{ ["--c" as string]: LAMP[a.severity] }}
+      aria-label={`${a.severity} alert: ${a.title}, ${a.mitre.id}${a.count > 1 ? `, ${a.count} times` : ""}${handled ? `, ${a.status}` : ""}`}
+    >
+      <span className="strip-call">
+        <span className="lcd whitespace-nowrap text-[10.5px] font-semibold">{a.mitre.id}</span>
+        <span className={`text-[10.5px] font-semibold uppercase tracking-wider ${a.severity === "critical" ? "blink" : ""}`} style={{ color: a.severity === "low" ? "var(--muted)" : "var(--c)" }}>
+          {a.severity}
+        </span>
+      </span>
+      <span className="strip-body">
+        <span className={`block font-medium ${compact ? "line-clamp-2 text-[13px] leading-snug" : "truncate text-sm"}`}>{a.title}</span>
+        <span className="lcd mt-0.5 block truncate text-[10.5px] text-faint">{route ?? `${a.src} → ${a.dst}`}</span>
+      </span>
+      <span className="strip-box">
+        <span className="lcd text-[12px] font-medium">{a.count > 1 ? `×${a.count}` : "×1"}</span>
+        <span className="text-[10px] text-faint">{absolute ? clock(a.firstSeen) : ago(a.lastSeen)}</span>
+      </span>
+    </button>
+  );
+}
+
+export function AlertRow(props: { a: Alert; fresh?: boolean; onOpen: (a: Alert) => void; absolute?: boolean }) {
   return (
     <li>
-      <button onClick={() => onOpen(a)} className={`grid w-full grid-cols-[5.5rem_1fr_auto] items-center gap-3 border-t border-line px-5 py-3 text-left hover:bg-panel-2 ${fresh ? "row-new" : ""}`}>
-        <SevBadge s={a.severity} />
-        <span className="min-w-0">
-          <span className="block truncate text-sm">{a.title}</span>
-          <span className="mt-0.5 block truncate text-xs text-faint">
-            <span className="font-mono">{a.mitre.id}</span> {a.mitre.tactic}, {a.src} → {a.dst}
-          </span>
-        </span>
-        <span className="text-right text-xs text-faint">
-          {a.count > 1 && <span className="mr-2 rounded bg-panel-2 px-1.5 py-0.5 font-mono text-muted">×{a.count}</span>}
-          {absolute ? clock(a.firstSeen) : ago(a.lastSeen)}
-        </span>
-      </button>
+      <Strip {...props} />
     </li>
   );
 }

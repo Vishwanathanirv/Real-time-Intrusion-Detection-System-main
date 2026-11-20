@@ -10,7 +10,7 @@ PacketEye watches network traffic, rebuilds every connection, and raises alerts 
 
 It is built **end to end in TypeScript**: a pcap parser, TLS ClientHello parsing with **JA4 fingerprinting**, flow tracking, eight behavioural detectors, an unsupervised anomaly model, a **Suricata-compatible rule engine**, a Node.js API and a React dashboard.
 
-![The live network map](docs/screenshots/overview.png)
+![The sonar scope](docs/screenshots/overview.png)
 
 > Version 2 is a full rebuild. The original Python, Spring Boot and React version is kept on the [`v1-original`](https://github.com/Vishwanathanirv/real-time-intrusion-detection-system-main/tree/v1-original) branch.
 
@@ -102,19 +102,19 @@ Repeated hits are grouped into one alert with a running count, so a 5,000-packet
 
 ## Dashboard
 
-The app is a **live map of the network** that fills the screen. Every host is a dot: servers in the middle, workstations around them, the internet outside, placed by address so nothing jumps around. Traffic moves along the links as animated dashes, and an attack turns its hosts and links coral. Everything else floats over the map:
+The app is a **sonar scope for the network** that fills the screen. Every host is a contact on a range ring: servers at the core, workstations on the office ring, the internet at the edge. Positions come from the address, so nothing jumps around. A sweep passes over the scope, bearing ticks run around its rim, and traffic moves along the links as animated dashes. An attack turns its contacts and links coral, and the scope locks onto whatever you pick with corner brackets. Alerts are **air-traffic flight strips**: a severity bar, the ATT&CK technique as the callsign, the route from source to target, and the count and age in boxes of their own. Everything else floats over the scope, and the sweep stops when the system asks for reduced motion:
 
-- **Vital signs:** packets per second, bandwidth, active flows and open alerts.
-- **Alert feed:** the latest alerts; click one and its two hosts light up on the map while the inspector explains it.
+- **Vital signs:** one line of console telemetry: packets per second, bandwidth, active flows and open alerts.
+- **Strip feed:** the latest alerts as flight strips. Click one and the scope locks onto its two hosts while the inspector explains it.
 - **Inspector:** the network right now (busiest hosts, protocols and ports), or a host you clicked (its alerts and who it talks to, with ports), or an alert (MITRE technique, evidence, what to do, acknowledge or resolve with a note).
 - **Timeline:** the last two minutes of traffic with a tick where each alert fired, plus attack launch, pause and autopilot.
 - **Tool dock:** each tool opens as a sheet floating over the map, so the live view never goes away. Number keys 1 to 6 switch tools and Esc goes back to the map. Pan by dragging, zoom with the wheel or the buttons. Light and dark, and it works on a phone.
 
 - **TLS clients:** an inventory of every TLS fingerprint on the network, rarest first, with the hosts using it, server names and what the software looks like.
 - **Rules:** edit the Suricata ruleset in the browser. Bad rules are rejected with line numbers; each loaded rule shows how many packets it has matched.
-- **Alerts:** a triage queue (open, acknowledged, resolved) with severity filters. Each alert shows its MITRE technique, evidence, recommended response steps and analyst notes.
+- **Alerts:** the strip board (open, acknowledged, resolved) with severity filters. Picking a strip locks the scope onto it. Each alert shows its MITRE technique, evidence, recommended response steps and analyst notes.
 - **Analyse pcap:** drop in a capture of up to 50 MB and get findings, flows, top talkers and the TLS clients in it. A sample capture containing every attack type is built in.
-- **Coverage:** the evaluation report above, generated from the code.
+- **Coverage:** both evaluation reports above (simulated replay and NSL-KDD), generated from the code.
 
 | Alert detail | Analyse a capture |
 | --- | --- |
@@ -177,7 +177,7 @@ npm run benchmark                 # NSL-KDD public dataset, about 70 s on one co
 ```bash
 npm run lint && npm run typecheck
 npm test         # 59 tests
-npm run test:e2e # browser tests on the demo build: every section, a launched attack end to end, the sample pcap, rule validation
+npm run test:e2e # 9 browser tests on the demo build: every tool, a launched attack end to end, strip board to scope lock, the sample pcap, rule validation, NSL-KDD coverage, reduced motion and phone width
 ```
 
 The tests cover:

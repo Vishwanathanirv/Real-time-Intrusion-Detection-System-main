@@ -109,7 +109,7 @@ export function Analyze() {
           <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr]">
             <Panel title="Findings">
               {result.alerts.length ? (
-                <ul className="-mt-px">
+                <ul className="strip-board">
                   {result.alerts.map((a) => (
                     <AlertRow key={a.id} a={a} onOpen={setOpen} absolute />
                   ))}

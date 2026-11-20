@@ -1,10 +1,13 @@
 @import "tailwindcss";
 
 /*
- * PacketEye is a live map of the network. The map fills the screen and everything else floats
- * over it: an island with the vital signs, a tool dock, an inspector for whatever you select,
- * and a timeline you can scrub. Teal is normal traffic, coral is an attack; nothing else is
- * coloured, so an attack is the brightest thing on screen.
+ * PacketEye is a sonar scope for a network. Hosts sit on range rings (servers at the core,
+ * workstations around them, the internet at the edge), a sweep passes over them, and alerts are
+ * air-traffic flight strips: callsign, route, count. Every tool opens as a console over the scope,
+ * which keeps sweeping behind it.
+ *
+ * Teal is normal traffic, coral is an attack; nothing else is coloured, so an attack is the
+ * brightest thing on screen.
  */
 :root {
   --bg: #eef3f7;
@@ -213,6 +216,121 @@ body {
     scrollbar-width: thin;
     scrollbar-color: var(--line) transparent;
   }
+
+  /* Flight strips: one per alert. */
+  .strip-board {
+    display: grid;
+    gap: 6px;
+  }
+  .strip {
+    display: grid;
+    grid-template-columns: 5.1rem minmax(0, 1fr) 3.3rem;
+    align-items: stretch;
+    width: 100%;
+    text-align: left;
+    background: var(--panel-solid);
+    border: 1px solid var(--line);
+    border-left: 5px solid var(--c, var(--faint));
+    border-radius: 6px;
+    cursor: pointer;
+    transition: border-color 0.12s, transform 0.12s;
+  }
+  .panel > .strip {
+    border-top: 0;
+    border-right: 0;
+    border-bottom: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+  .strip:hover {
+    border-color: color-mix(in oklab, var(--accent) 55%, var(--line));
+    border-left-color: var(--c, var(--faint));
+  }
+  .strip-handled {
+    opacity: 0.62;
+    border-left-style: dashed;
+  }
+  .strip-call {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    padding: 0.45rem 0.55rem;
+    border-right: 1px dashed var(--line);
+  }
+  .strip-body {
+    min-width: 0;
+    padding: 0.45rem 0.65rem;
+    align-self: center;
+  }
+  .strip-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    border-left: 1px dashed var(--line);
+    padding: 0.35rem 0.25rem;
+    text-align: center;
+  }
+  /* Vital signs as one line of console telemetry. */
+  .telemetry {
+    display: grid;
+    grid-template-columns: 0.85fr 1.35fr 0.9fr 0.9fr;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  .telemetry > div {
+    padding: 0.4rem 0.4rem 0.35rem;
+    border-left: 1px solid var(--line);
+  }
+  .telemetry > div:first-child {
+    border-left: 0;
+    padding-left: 0;
+  }
+  .telemetry dt {
+    font-size: 9.5px;
+    font-weight: 650;
+    letter-spacing: 0.12em;
+    color: var(--faint);
+  }
+  .telemetry dd {
+    font-size: 12.5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  /* Instrument readouts: a figure under a tick scale. */
+  .readout {
+    position: relative;
+    padding: 0.85rem 0.2rem 0.4rem;
+    background-image: repeating-linear-gradient(90deg, var(--line) 0 1px, transparent 1px 8px);
+    background-size: 100% 6px;
+    background-repeat: no-repeat;
+    border-bottom: 1px solid var(--line);
+  }
+  .readout::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1px;
+    height: 10px;
+    background: var(--accent);
+  }
+  .readout-label {
+    font-size: 10.5px;
+    font-weight: 650;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  /* A tool console over the scope: translucent, so the sweep shows through. */
+  .console {
+    background: color-mix(in oklab, var(--panel-solid) 93%, transparent);
+    border-top: 3px solid var(--accent);
+  }
   .dots {
     background-color: var(--bg);
     background-image: radial-gradient(var(--dot) 1.2px, transparent 1.3px);
@@ -266,7 +384,20 @@ body {
 .rise {
   animation: rise 0.3s ease-out;
 }
+/* The sonar sweep: one turn every six seconds. */
+@keyframes sweep {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.sweep {
+  animation: sweep 6s linear infinite;
+  transform-origin: 0 0;
+}
 @media (prefers-reduced-motion: reduce) {
+  .sweep {
+    display: none;
+  }
   .blink,
   .flow,
   .alarm,
