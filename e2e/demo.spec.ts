@@ -158,3 +158,23 @@ test("explain-like-I'm-new mode adds plain words everywhere and is remembered", 
   await page.keyboard.press("e");
   await expect(page.getByText(/This is a sonar screen for a network/)).toHaveCount(0);
 });
+
+test("an alert becomes a shareable report link that opens on its own", async ({ page }) => {
+  await page.goto("/");
+  const strip = page.getByRole("button", { name: /Port scan/ }).first();
+  await expect(strip).toBeVisible({ timeout: 30_000 });
+  await strip.click();
+  const inspector = page.getByRole("complementary", { name: "Inspector" });
+  const title = (await inspector.getByRole("heading", { level: 2 }).first().textContent()) ?? "";
+  await inspector.getByRole("button", { name: "Share report" }).click();
+  const href = await inspector.getByRole("link", { name: "Open the report" }).getAttribute("href");
+  expect(href).toMatch(/\/report#[A-Za-z0-9_-]{50,}$/);
+  await page.goto(href!);
+  await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
+  await expect(page.getByText("T1046").first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Recommended response" })).toBeVisible();
+  await expect(page.getByRole("img", { name: /The incident on the scope, frame \d+ of [1-9]\d*/ })).toBeVisible();
+  // A damaged link says so instead of breaking.
+  await page.goto("/report#broken");
+  await expect(page.getByRole("heading", { name: "No report here" })).toBeVisible();
+});

@@ -129,7 +129,7 @@ export function AlertRow(props: { a: Alert; fresh?: boolean; onOpen: (a: Alert) 
   );
 }
 
-const NEXT_STEPS: Record<string, string[]> = {
+export const NEXT_STEPS: Record<string, string[]> = {
   port_scan: ["Check whether the source is an approved scanner or pentest.", "Block the source at the firewall if it is external.", "Review which ports answered: those services are now known to the attacker."],
   host_sweep: ["Identify the source machine and who is logged in.", "Look for follow-up connections from it to the hosts it found.", "Isolate it if the sweep is not expected."],
   syn_flood: ["Enable SYN cookies on the target (net.ipv4.tcp_syncookies=1).", "Rate-limit or drop at the edge, or turn on upstream DDoS protection.", "Watch the service's response time and backlog."],
@@ -147,7 +147,21 @@ export function AlertBody({ alert, onChange }: { alert: Alert; onChange?: (a: Al
   const [note, setNote] = useState(alert.note ?? "");
   const [err, setErr] = useState<string | null>(null);
   const actions = useActions();
+  const [link, setLink] = useState<{ url: string; copied: boolean } | null>(null);
+  async function shareIt() {
+    if (!actions.share) return;
+    const url = await actions.share(a);
+    let copied = false;
+    try {
+      await navigator.clipboard.writeText(url);
+      copied = true;
+    } catch {
+      /* no clipboard permission: the link is shown instead */
+    }
+    setLink({ url, copied });
+  }
   useEffect(() => {
+    setLink(null);
     setA(alert);
     setNote(alert.note ?? "");
   }, [alert]);
@@ -182,6 +196,23 @@ export function AlertBody({ alert, onChange }: { alert: Alert; onChange?: (a: Al
             </svg>
             Replay this incident
           </button>
+          {actions.share && (
+            <button className="btn h-8" onClick={() => void shareIt()}>
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1" />
+              </svg>
+              Share report
+            </button>
+          )}
+        </div>
+      )}
+      {link && (
+        <div className="screen rise mt-2 px-3 py-2 text-sm" role="status">
+          <span className="text-muted">{link.copied ? "Link copied. " : "Your report link: "}</span>
+          <a href={link.url} target="_blank" rel="noreferrer" className="font-semibold text-accent underline underline-offset-2">
+            Open the report
+          </a>
+          <span className="block text-xs text-faint">The whole report is inside the link, so nothing is uploaded.</span>
         </div>
       )}
 

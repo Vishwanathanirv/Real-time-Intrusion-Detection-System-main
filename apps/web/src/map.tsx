@@ -20,7 +20,7 @@ const hash = (s: string) => {
  * stays where you last saw it.
  */
 const ipNum = (ip: string) => ip.split(".").reduce((n, o) => n * 256 + Number(o), 0);
-const isServer = (n: { ip: string; internal: boolean }) => n.internal && Number(n.ip.split(".")[3] ?? 0) < 100;
+export const isServer = (n: { ip: string; internal: boolean }) => n.internal && Number(n.ip.split(".")[3] ?? 0) < 100;
 
 /** Range rings of the scope: core (servers), office (workstations), edge (the internet). */
 const CORE = 120;
@@ -52,7 +52,7 @@ export function place(n: Graph["nodes"][number], seen: { servers: string[]; work
 }
 
 /** Four corner brackets around a contact the scope has locked onto. */
-const lockOn = (h: number) => {
+export const lockOn = (h: number) => {
   const l = h * 0.45;
   return [
     [-1, -1],

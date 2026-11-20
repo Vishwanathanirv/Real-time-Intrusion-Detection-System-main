@@ -10,6 +10,8 @@ import { Alerts } from "./pages/Alerts";
 import { Analyze } from "./pages/Analyze";
 import { Detection } from "./pages/Detection";
 import { Lab } from "./pages/Lab";
+import { Report } from "./pages/Report";
+import { buildReport, encodeReport } from "./report-codec";
 import { Rules } from "./pages/Rules";
 import { Tls } from "./pages/Tls";
 import { ActionsContext, Plain, usePlainSetting, type Actions } from "./actions";
@@ -168,7 +170,8 @@ function Shell() {
     [frames, navigate],
   );
   const [plain, setPlain] = usePlainSetting();
-  const actions = useMemo<Actions>(() => ({ replay: replayAlert, canReplay: (a) => canReplay(a, frames), plain, setPlain }), [replayAlert, frames, plain, setPlain]);
+  const share = useCallback(async (a: Alert) => `${location.origin}/report#${await encodeReport(buildReport(a, frames))}`, [frames]);
+  const actions = useMemo<Actions>(() => ({ replay: replayAlert, canReplay: (a) => canReplay(a, frames), share, plain, setPlain }), [replayAlert, frames, share, plain, setPlain]);
   const frame = replay ? frameAt(frames, replay.t) : undefined;
   const scopeAlerts = replay ? alertsAt(live.alerts, replay.t) : live.alerts;
   const last = s?.series.slice(-5) ?? [];
@@ -393,7 +396,10 @@ function Shell() {
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>
-      <Shell />
+      <Routes>
+        <Route path="/report" element={<Report />} />
+        <Route path="*" element={<Shell />} />
+      </Routes>
     </BrowserRouter>
   </StrictMode>,
 );

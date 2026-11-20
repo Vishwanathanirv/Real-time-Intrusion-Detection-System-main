@@ -5,7 +5,8 @@ import type { Alert } from "./lib";
 export type Actions = {
   replay?: (a: Alert) => void;
   canReplay?: (a: Alert) => boolean;
-  share?: (a: Alert) => void;
+  /** Builds a self-contained report link for an alert. */
+  share?: (a: Alert) => Promise<string>;
   /** "Explain like I'm new": plain-language notes next to everything technical. */
   plain: boolean;
   setPlain?: (on: boolean) => void;
