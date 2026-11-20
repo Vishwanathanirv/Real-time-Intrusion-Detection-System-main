@@ -89,12 +89,21 @@ export function Scrubber({ frames, alerts, replay, onChange, onExit }: { frames:
             <path d="M11 6v12L3 12zM20 6v12l-8-6z" />
           </svg>
         </button>
-        <button className="btn btn-warn h-9 w-9 justify-center px-0" onClick={() => onChange({ ...replay, playing: !replay.playing, t: !replay.playing && replay.t >= end ? start : replay.t })} aria-label={replay.playing ? "Pause the replay" : "Play the replay"} title="Play or pause (Space)">
+        <button
+          className="btn btn-warn h-9 w-9 justify-center px-0"
+          onClick={() => onChange({ ...replay, playing: !replay.playing, t: !replay.playing && replay.t >= end ? start : replay.t })}
+          aria-label={replay.playing ? "Pause the replay" : "Play the replay"}
+          title="Play or pause (Space)"
+        >
           <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden>
             <path d={replay.playing ? "M6 5h4v14H6zM14 5h4v14h-4z" : "M7 4l13 8-13 8z"} />
           </svg>
         </button>
-        <button className="btn lcd h-9 w-12 justify-center px-0 text-xs" onClick={() => onChange({ ...replay, speed: SPEEDS[(SPEEDS.indexOf(replay.speed) + 1) % SPEEDS.length] })} aria-label={`Playback speed ${replay.speed} times. Change speed`}>
+        <button
+          className="btn lcd h-9 w-12 justify-center px-0 text-xs"
+          onClick={() => onChange({ ...replay, speed: SPEEDS[(SPEEDS.indexOf(replay.speed) + 1) % SPEEDS.length] })}
+          aria-label={`Playback speed ${replay.speed} times. Change speed`}
+        >
           {replay.speed}×
         </button>
       </div>
@@ -129,7 +138,9 @@ export function Scrubber({ frames, alerts, replay, onChange, onExit }: { frames:
       </svg>
       <div className="flex items-center gap-2">
         <span className="lcd text-[12px] leading-tight">
-          <span className="block text-warn">T−{Math.floor(behind / 60)}:{String(behind % 60).padStart(2, "0")}</span>
+          <span className="block text-warn">
+            T−{Math.floor(behind / 60)}:{String(behind % 60).padStart(2, "0")}
+          </span>
           <span className="block text-faint">{clock(replay.t)}</span>
         </span>
         <button className="btn h-9" onClick={onExit} title="Back to live (L)">

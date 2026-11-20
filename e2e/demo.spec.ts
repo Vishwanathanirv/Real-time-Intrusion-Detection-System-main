@@ -11,7 +11,13 @@ test("every tool opens over the map without errors", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("img", { name: /Network map: \d+ hosts/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: "The network right now" })).toBeVisible();
-  for (const [path, heading] of [["/alerts", "Alerts"], ["/tls", "TLS clients"], ["/rules", "Detection rules"], ["/analyze", "Analyse a capture"], ["/detection", "Detection coverage"]]) {
+  for (const [path, heading] of [
+    ["/alerts", "Alerts"],
+    ["/tls", "TLS clients"],
+    ["/rules", "Detection rules"],
+    ["/analyze", "Analyse a capture"],
+    ["/detection", "Detection coverage"],
+  ]) {
     await page.goto(path);
     await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
   }
@@ -67,7 +73,10 @@ test("picking a strip on the alert board locks the scope onto that alert", async
   await page.getByRole("button", { name: "Launch" }).click();
   await page.keyboard.press("2");
   await expect(page.getByRole("heading", { level: 1, name: "Alerts" })).toBeVisible();
-  const strip = page.getByRole("list", { name: "open alerts" }).getByRole("button", { name: /Port scan/ }).first();
+  const strip = page
+    .getByRole("list", { name: "open alerts" })
+    .getByRole("button", { name: /Port scan/ })
+    .first();
   await expect(strip).toBeVisible({ timeout: 30_000 });
   await expect(strip).toContainText("T1046");
   await strip.click();

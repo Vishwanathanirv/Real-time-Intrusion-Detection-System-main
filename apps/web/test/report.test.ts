@@ -2,7 +2,22 @@ import { describe, expect, it } from "vitest";
 import { buildReport, decodeReport, encodeReport } from "../src/report-codec";
 import type { Alert, Frame } from "../src/lib";
 
-const alert: Alert = { id: "live-1", type: "port_scan", severity: "high", title: "Port scan from 45.1.2.3", description: "45.1.2.3 probed 25 ports", src: "45.1.2.3", dst: "10.0.0.10:22", firstSeen: 100_000, lastSeen: 110_000, count: 400, mitre: { id: "T1046", name: "Network Service Discovery", tactic: "Discovery" }, evidence: { distinctPorts: 400 }, status: "open", note: null };
+const alert: Alert = {
+  id: "live-1",
+  type: "port_scan",
+  severity: "high",
+  title: "Port scan from 45.1.2.3",
+  description: "45.1.2.3 probed 25 ports",
+  src: "45.1.2.3",
+  dst: "10.0.0.10:22",
+  firstSeen: 100_000,
+  lastSeen: 110_000,
+  count: 400,
+  mitre: { id: "T1046", name: "Network Service Discovery", tactic: "Discovery" },
+  evidence: { distinctPorts: 400 },
+  status: "open",
+  note: null,
+};
 
 const frames: Frame[] = Array.from({ length: 200 }, (_, i) => ({
   t: 20_000 + i * 1000,

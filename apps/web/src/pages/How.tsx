@@ -60,7 +60,16 @@ function StageScope({ step, onPick }: { step: number; onPick: (n: number) => voi
       {STAGES.map((s, i) => {
         const state = i < step ? "past" : i === step ? "now" : "next";
         return (
-          <g key={s.key} className="cursor-pointer" onClick={() => onPick(i)} role="button" tabIndex={0} aria-label={`Stage ${i + 1}: ${s.name}`} aria-current={i === step ? "step" : undefined} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onPick(i)}>
+          <g
+            key={s.key}
+            className="cursor-pointer"
+            onClick={() => onPick(i)}
+            role="button"
+            tabIndex={0}
+            aria-label={`Stage ${i + 1}: ${s.name}`}
+            aria-current={i === step ? "step" : undefined}
+            onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onPick(i)}
+          >
             {s.r > 0 ? (
               <>
                 <circle r={s.r} fill="none" stroke="transparent" strokeWidth={60} />
@@ -130,7 +139,10 @@ function Stage({ step, trace }: { step: number; trace: Trace }) {
   if (step === 0)
     return (
       <>
-        <p className="how-lead">A network card sees every frame that passes. PacketEye reads them from tcpdump, an uploaded capture or its simulator. This is one, exactly as it arrived: {trace.frame.length} bytes from {p.src}, mixed in with {trace.background.toLocaleString("en-IN")} packets of ordinary office traffic.</p>
+        <p className="how-lead">
+          A network card sees every frame that passes. PacketEye reads them from tcpdump, an uploaded capture or its simulator. This is one, exactly as it arrived: {trace.frame.length} bytes from {p.src}, mixed in with{" "}
+          {trace.background.toLocaleString("en-IN")} packets of ordinary office traffic.
+        </p>
         <Hex trace={trace} />
         <ul className="mt-4 grid gap-2 sm:grid-cols-2">
           {trace.layers.map((l, i) => (
@@ -163,7 +175,8 @@ function Stage({ step, trace }: { step: number; trace: Trace }) {
             ?
           </span>
           <span>
-            <strong className="font-semibold">JA4</strong> sums up how this app says hello: TLS version, how many ciphers and extensions it offers, and a hash of them. Every Chrome on the network says hello the same way. This one doesn't match anything else here.
+            <strong className="font-semibold">JA4</strong> sums up how this app says hello: TLS version, how many ciphers and extensions it offers, and a hash of them. Every Chrome on the network says hello the same way. This one doesn't
+            match anything else here.
           </span>
         </p>
       </>
@@ -212,7 +225,10 @@ function Stage({ step, trace }: { step: number; trace: Trace }) {
               <strong>Behaviour</strong>
               <Verdict fired={Boolean(rare)}>{rare ? "Fired" : "Quiet"}</Verdict>
             </div>
-            <p>Eight detectors count and time things: ports tried, logins per minute, regular call-home timers, and how many hosts share each TLS fingerprint. {rare ? `This fingerprint is used by ${rare.evidence.hostsWithFingerprint} host on the network, so it is rare.` : ""}</p>
+            <p>
+              Eight detectors count and time things: ports tried, logins per minute, regular call-home timers, and how many hosts share each TLS fingerprint.{" "}
+              {rare ? `This fingerprint is used by ${rare.evidence.hostsWithFingerprint} host on the network, so it is rare.` : ""}
+            </p>
           </li>
           <li>
             <div className="flex items-center justify-between gap-3">
@@ -239,7 +255,14 @@ function Stage({ step, trace }: { step: number; trace: Trace }) {
             </div>
           </li>
         </ol>
-        {!ml && <p className="plain mt-4"><span className="plain-mark" aria-hidden>!</span><span>The model alone would have missed this implant: its flow is small and short, like a normal web request. The fingerprint is what gives it away. That is why PacketEye never relies on one method.</span></p>}
+        {!ml && (
+          <p className="plain mt-4">
+            <span className="plain-mark" aria-hidden>
+              !
+            </span>
+            <span>The model alone would have missed this implant: its flow is small and short, like a normal web request. The fingerprint is what gives it away. That is why PacketEye never relies on one method.</span>
+          </p>
+        )}
       </>
     );
   }
@@ -313,7 +336,8 @@ export function How() {
         </Link>
       </header>
       <p className="how-idea">
-        <span className="tape-badge !bg-accent">KEY IDEA</span> PacketEye never reads what's inside a message. It watches the <em>shape</em> of conversations: who talks to whom, how often, how much, how regularly, and how each app says hello. Attacks have a shape, even when they're encrypted.
+        <span className="tape-badge !bg-accent">KEY IDEA</span> PacketEye never reads what's inside a message. It watches the <em>shape</em> of conversations: who talks to whom, how often, how much, how regularly, and how each app says
+        hello. Attacks have a shape, even when they're encrypted.
       </p>
       <div className="how-grid">
         <div className="how-left">

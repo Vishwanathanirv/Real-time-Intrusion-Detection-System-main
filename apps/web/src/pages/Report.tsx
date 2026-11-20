@@ -25,15 +25,25 @@ function MiniScope({ report }: { report: R }) {
     const ipNum = (ip: string) => ip.split(".").reduce((n, o) => n * 256 + Number(o), 0);
     const ips = [...all.entries()].map(([ip, internal]) => ({ ip, internal }));
     return {
-      servers: ips.filter(isServer).map((n) => n.ip).sort((a, b) => ipNum(a) - ipNum(b)),
-      workstations: ips.filter((n) => n.internal && !isServer(n)).map((n) => n.ip).sort((a, b) => ipNum(a) - ipNum(b)),
+      servers: ips
+        .filter(isServer)
+        .map((n) => n.ip)
+        .sort((a, b) => ipNum(a) - ipNum(b)),
+      workstations: ips
+        .filter((n) => n.internal && !isServer(n))
+        .map((n) => n.ip)
+        .sort((a, b) => ipNum(a) - ipNum(b)),
     };
   }, [frames]);
   const f = frames[i];
   const hot = new Set([hostOf(alert.src), hostOf(alert.dst)]);
   const raised = f ? f.t >= alert.firstSeen : false;
   const pos = new Map((f?.graph.nodes ?? []).map((n) => [n.ip, { ...n, ...place(n, seen) }]));
-  for (const ip of hot) if (!pos.has(ip)) { const n = { ip, bytes: 0, internal: /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(ip) }; pos.set(ip, { ...n, ...place(n, seen) }); }
+  for (const ip of hot)
+    if (!pos.has(ip)) {
+      const n = { ip, bytes: 0, internal: /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(ip) };
+      pos.set(ip, { ...n, ...place(n, seen) });
+    }
   return (
     <figure className="report-scope">
       <svg viewBox="-600 -600 1200 1200" className="block w-full" role="img" aria-label={`The incident on the scope, frame ${i + 1} of ${frames.length}`}>
@@ -71,7 +81,18 @@ function MiniScope({ report }: { report: R }) {
             <path d={playing ? "M6 5h4v14H6zM14 5h4v14h-4z" : "M7 4l13 8-13 8z"} />
           </svg>
         </button>
-        <input type="range" className="dial flex-1" min={0} max={Math.max(0, frames.length - 1)} value={i} onChange={(e) => { setPlaying(false); setI(Number(e.target.value)); }} aria-label="Incident frame" />
+        <input
+          type="range"
+          className="dial flex-1"
+          min={0}
+          max={Math.max(0, frames.length - 1)}
+          value={i}
+          onChange={(e) => {
+            setPlaying(false);
+            setI(Number(e.target.value));
+          }}
+          aria-label="Incident frame"
+        />
         <span className="lcd w-20 text-right text-xs text-muted">{f ? clock(f.t) : "–"}</span>
       </figcaption>
       {!frames.length && <p className="mt-2 text-xs text-faint">The scope was not recording when this alert was raised, so the report has no frames.</p>}
@@ -109,7 +130,15 @@ export function Report() {
           <span className="display text-lg font-bold">PacketEye</span>
           <span className="silk">Incident report</span>
           <span className="flex w-full flex-wrap gap-2 whitespace-nowrap sm:ml-auto sm:w-auto print:hidden">
-            <button className="btn h-8" onClick={() => void navigator.clipboard?.writeText(location.href).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); })}>
+            <button
+              className="btn h-8"
+              onClick={() =>
+                void navigator.clipboard?.writeText(location.href).then(() => {
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 1500);
+                })
+              }
+            >
               {copied ? "Link copied" : "Copy link"}
             </button>
             <button className="btn h-8" onClick={() => print()} disabled={!r}>
@@ -171,7 +200,9 @@ export function Report() {
                   <p className="mt-1.5 leading-relaxed">{a.description}</p>
                   {PLAIN[a.type] && (
                     <p className="plain mt-3">
-                      <span className="plain-mark" aria-hidden>?</span>
+                      <span className="plain-mark" aria-hidden>
+                        ?
+                      </span>
                       <span>
                         <strong className="font-semibold">In plain words: </strong>
                         {PLAIN[a.type].what} <span className="text-muted">Why it matters: {PLAIN[a.type].why}</span>
@@ -208,9 +239,7 @@ export function Report() {
                 )}
               </div>
             </div>
-            <footer className="mt-10 border-t border-line pt-4 text-xs text-faint">
-              Shared {new Date(r.createdAt).toLocaleString("en-GB")}. This report is stored entirely in its link: opening it sends nothing to any server.
-            </footer>
+            <footer className="mt-10 border-t border-line pt-4 text-xs text-faint">Shared {new Date(r.createdAt).toLocaleString("en-GB")}. This report is stored entirely in its link: opening it sends nothing to any server.</footer>
           </article>
         )}
       </div>

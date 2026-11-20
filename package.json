@@ -2,7 +2,7 @@
   "name": "packeteye",
   "private": true,
   "version": "2.0.0",
-  "description": "Real-time network intrusion detection in TypeScript: pcap parsing, flow tracking, MITRE ATT&CK-mapped detectors, anomaly detection and a live SOC dashboard.",
+  "description": "PacketEye: sonar for your network. Real-time intrusion detection with rules and machine learning, incident replay, a what-if attack lab and shareable reports.",
   "license": "MIT",
   "type": "module",
   "workspaces": [

@@ -101,8 +101,13 @@ export function Lab({ live }: { live: boolean }) {
     <div className="space-y-5">
       <div>
         <h1 className="display pr-12 text-[1.6rem] font-bold leading-tight">What-if lab</h1>
-        <p className="mt-2 max-w-2xl text-[0.95rem] text-muted">Would PacketEye still catch it if the attacker were patient, or if you tuned a detector? Pick an attack, slow it down, move the threshold. Each change replays the attack through a separate copy of the sensor, then runs the same clean traffic again to count false alarms.</p>
-        <Plain className="mt-3 max-w-2xl">A threshold is the line a detector draws: 'more than this many tries is an attack'. Set it low and you catch more attackers, but also more innocent people. Patient attackers try to stay under it.</Plain>
+        <p className="mt-2 max-w-2xl text-[0.95rem] text-muted">
+          Would PacketEye still catch it if the attacker were patient, or if you tuned a detector? Pick an attack, slow it down, move the threshold. Each change replays the attack through a separate copy of the sensor, then runs the same
+          clean traffic again to count false alarms.
+        </p>
+        <Plain className="mt-3 max-w-2xl">
+          A threshold is the line a detector draws: 'more than this many tries is an attack'. Set it low and you catch more attackers, but also more innocent people. Patient attackers try to stay under it.
+        </Plain>
       </div>
 
       <div role="radiogroup" aria-label="Attack" className="flex flex-wrap gap-1.5">
