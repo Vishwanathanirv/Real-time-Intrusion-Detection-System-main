@@ -16,6 +16,8 @@ import { buildReport, encodeReport } from "./report-codec";
 import { Rules } from "./pages/Rules";
 import { Tls } from "./pages/Tls";
 import { Briefing, useBriefing } from "./briefing";
+import { Palette, type Command } from "./palette";
+import { useSonar } from "./sound";
 import { ActionsContext, Plain, usePlainSetting, type Actions } from "./actions";
 import { alertsAt, canReplay, frameAt, incidentWindow, Scrubber, useReplayClock, type Replay } from "./replay";
 import { AlertBody, Bars, SevBadge, Strip, TrafficChart } from "./ui";
@@ -154,6 +156,22 @@ function Shell() {
   const [msg, setMsg] = useState<string | null>(null);
   const [replay, setReplay] = useState<Replay | null>(null);
   const [briefing, setBriefing] = useBriefing();
+  const [palette, setPalette] = useState(false);
+  const sonar = useSonar();
+  // A sonar ping for every alert that is new since the page opened.
+  const heard = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    if (!live.connected) return;
+    if (!heard.current) {
+      heard.current = new Set(live.alerts.map((a) => a.id));
+      return;
+    }
+    for (const a of live.alerts)
+      if (!heard.current.has(a.id)) {
+        heard.current.add(a.id);
+        sonar.ping(a.severity);
+      }
+  }, [live.alerts, live.connected, sonar]);
   const s = live.stats;
   const frames = live.frames;
   const newest = frames[frames.length - 1]?.t ?? Date.now();
@@ -187,7 +205,18 @@ function Shell() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement;
-      if (["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName) || e.metaKey || e.ctrlKey) return;
+      if ((e.key === "k" || e.key === "K") && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setPalette((v) => !v);
+        return;
+      }
+      if (["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName) || e.metaKey || e.ctrlKey || e.altKey || palette) return;
+      if (e.key === "/" || e.key === "?") {
+        e.preventDefault();
+        setPalette(true);
+        return;
+      }
+      if (e.key === "m" || e.key === "M") sonar.toggle();
       if (e.key === "Escape") {
         if (briefing) setBriefing(false);
         else if (sheet) navigate("/");
@@ -210,7 +239,7 @@ function Shell() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [sheet, navigate, replay, rewind, plain, setPlain, briefing, setBriefing]);
+  }, [sheet, navigate, replay, rewind, plain, setPlain, briefing, setBriefing, palette, sonar]);
 
   async function launch(kind = attack, follow = false) {
     setMsg(null);
@@ -246,6 +275,21 @@ function Shell() {
     if (x) setInspector(true);
   };
 
+  const latest = live.alerts[0];
+  const commands: Command[] = [
+    ...(attackList?.attacks ?? []).map((a) => ({ id: `launch-${a.kind}`, group: "Launch an attack", label: `Launch: ${a.label}`, run: () => void launch(a.kind, true) })),
+    { id: "rewind", group: "Scope", label: replay ? "Back to live" : "Rewind the last minute", keys: "R", run: () => (replay ? setReplay(null) : rewind()) },
+    ...(latest ? [{ id: "replay-latest", group: "Scope", label: `Replay the latest incident: ${latest.title}`, run: () => replayAlert(latest) }] : []),
+    ...(latest ? [{ id: "share-latest", group: "Scope", label: "Share the latest alert as a report", run: () => void share(latest).then((url) => location.assign(url)) }] : []),
+    { id: "pause", group: "Scope", label: s?.state.running === false ? "Resume the sensor" : "Pause the sensor", run: () => void setLive({ running: !(s?.state.running ?? true) }) },
+    { id: "autopilot", group: "Scope", label: s?.state.autopilot ? "Turn autopilot off" : "Turn autopilot on (random attacks)", run: () => void setLive({ autopilot: !s?.state.autopilot }) },
+    ...TOOLS.map((t, i) => ({ id: `tool-${t.to}`, group: "Open", label: t.t, keys: String(i + 1), run: () => navigate(t.to) })),
+    { id: "how", group: "Learn", label: "How it works", keys: "H", run: () => navigate("/how") },
+    { id: "explain", group: "Learn", label: plain ? "Explain like I'm new: turn off" : "Explain like I'm new: turn on", keys: "E", run: () => setPlain(!plain) },
+    { id: "idea", group: "Learn", label: "The idea behind PacketEye", run: () => (navigate("/"), setBriefing(true)) },
+    { id: "sound", group: "Learn", label: sonar.on ? "Sonar pings: turn off" : "Sonar pings: hear every alert", keys: "M", run: sonar.toggle },
+  ];
+
   const inspectorBody = useMemo<ReactNode>(() => {
     if (sel?.kind === "alert") return <AlertBody key={sel.alert.id} alert={live.alerts.find((a) => a.id === sel.alert.id) ?? sel.alert} />;
     if (sel?.kind === "host") return <HostCard ip={sel.ip} live={live} onAlert={(a) => pick({ kind: "alert", alert: a })} />;
@@ -265,7 +309,10 @@ function Shell() {
           <button className="display text-[1.1rem] font-bold" onClick={() => setBriefing(true)} title="What is PacketEye?">
             PacketEye
           </button>
-          <span className="ml-auto inline-flex items-center gap-1.5 text-xs text-muted" aria-live="polite">
+          <button className={`ml-auto grid h-7 w-7 place-items-center rounded-lg ${sonar.on ? "text-accent" : "text-faint hover:text-ink"}`} onClick={sonar.toggle} aria-pressed={sonar.on} aria-label="Sonar pings" title="Sonar pings: hear every alert (M)">
+            <Icon className="h-4 w-4" d={sonar.on ? "M11 5L6 9H3v6h3l5 4zM15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" : "M11 5L6 9H3v6h3l5 4zM22 9l-6 6M16 9l6 6"} />
+          </button>
+          <span className="inline-flex items-center gap-1.5 text-xs text-muted" aria-live="polite">
             <span className={`led ${live.connected && s?.state.running !== false ? "" : "led-off"}`} aria-hidden />
             {!live.connected ? "Connecting" : s?.state.running === false ? "Paused" : "Live"}
           </span>
@@ -312,6 +359,10 @@ function Shell() {
         <button className={`flex items-center gap-2 rounded-[13px] px-2.5 py-2 text-[13px] font-semibold ${replay ? "bg-warn text-[#1d1300]" : "text-warn hover:bg-panel-2"}`} onClick={() => (replay ? setReplay(null) : rewind())} title="Rewind the scope (R)" aria-pressed={Boolean(replay)} disabled={frames.length < 2}>
           <Icon d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5M12 8v4l3 2" />
           <span className="hidden xl:inline">Rewind</span>
+        </button>
+        <button className="flex items-center gap-1.5 rounded-[13px] px-2.5 py-2 text-[13px] font-semibold text-muted hover:bg-panel-2 hover:text-ink" onClick={() => setPalette(true)} aria-label="Command console" title="Command console (Ctrl+K or /)">
+          <Icon d="M4 17l6-5-6-5M12 19h8" />
+          <kbd className="hidden xl:inline">⌘K</kbd>
         </button>
         <Link to="/how" className="flex items-center gap-2 rounded-[13px] px-2.5 py-2 text-[13px] font-semibold text-muted hover:bg-panel-2 hover:text-ink" title="How it works (H)" aria-label="How it works">
           <Icon d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM12 11.5v1" />
@@ -391,6 +442,8 @@ function Shell() {
         )}
         {msg && <p className="w-full text-xs text-muted" aria-live="polite">{msg}</p>}
       </div>
+
+      {palette && <Palette commands={commands} onClose={() => setPalette(false)} />}
 
       {briefing && !sheet && (
         <Briefing

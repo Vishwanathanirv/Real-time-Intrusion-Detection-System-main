@@ -227,3 +227,29 @@ test("first screen: a first-time visitor gets the idea, then watches an attack g
   await page.keyboard.press("Escape");
   await expect(page.getByRole("heading", { name: "See attacks the way radar sees aircraft." })).toHaveCount(0);
 });
+
+test("the command console runs any action by name, and sonar pings sound for new alerts", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByText("Live", { exact: true })).toBeVisible({ timeout: 30_000 });
+  await page.getByRole("button", { name: "Sonar pings" }).click();
+  await expect(page.getByRole("button", { name: "Sonar pings" })).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("Control+k");
+  const console = page.getByRole("dialog", { name: "Command console" });
+  await expect(console).toBeVisible();
+  await page.getByRole("combobox", { name: "Command" }).fill("launch dns");
+  await expect(console.getByRole("option", { name: "Launch: DNS tunnelling" })).toHaveAttribute("aria-selected", "true");
+  await page.keyboard.press("Enter");
+  await expect(console).toBeHidden();
+  // The scope follows the launched attack, and its alert pings.
+  await expect(page.getByRole("complementary", { name: "Inspector" })).toContainText("T1071.004", { timeout: 30_000 });
+  await expect.poll(() => page.evaluate(() => Number(document.documentElement.dataset.pings ?? 0))).toBeGreaterThan(0);
+  await page.keyboard.press("/");
+  await page.getByRole("combobox", { name: "Command" }).fill("explain");
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("button", { name: "Explain like I'm new" })).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("/");
+  await page.getByRole("combobox", { name: "Command" }).fill("nothing like this");
+  await expect(page.getByText(/No command matches/)).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(console).toBeHidden();
+});

@@ -360,6 +360,76 @@ body {
     border-radius: 5px;
     color: var(--muted);
   }
+  /* The command console. */
+  .palette-wrap {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 12dvh 0.75rem 1rem;
+    background: color-mix(in oklab, var(--bg) 55%, transparent);
+    backdrop-filter: blur(3px);
+  }
+  .palette {
+    width: min(36rem, 100%);
+    border: 1px solid var(--line);
+    border-top: 3px solid var(--accent);
+    border-radius: 16px;
+    background: var(--panel-solid);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    animation: drop 0.32s var(--spring);
+  }
+  .palette-input {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .palette-input input {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    outline: none;
+    font-size: 1rem;
+    color: var(--ink);
+  }
+  .palette-input input:focus-visible {
+    outline: none;
+  }
+  .palette-input input::placeholder {
+    color: var(--faint);
+  }
+  .palette-list {
+    max-height: min(26rem, 60dvh);
+    padding: 0.35rem;
+  }
+  .palette-group {
+    padding: 0.6rem 0.75rem 0.25rem;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+  .palette-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: 9px;
+    font-size: 0.92rem;
+    cursor: pointer;
+  }
+  .palette-item[aria-selected="true"] {
+    background: var(--accent-soft);
+    color: var(--ink);
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
   /* How it works: the pipeline as range rings. */
   .how {
     background: radial-gradient(900px 600px at 25% 40%, color-mix(in oklab, var(--accent) 7%, transparent), transparent), var(--bg);
@@ -904,6 +974,12 @@ body {
     opacity: 0;
   }
 }
+@keyframes drop {
+  from {
+    transform: translateY(-14px) scale(0.98);
+    opacity: 0;
+  }
+}
 @keyframes shimmer {
   to {
     background-position: -150% 0;
@@ -919,6 +995,7 @@ body {
   .row-new,
   .rise,
   .briefing,
+  .palette,
   .plain,
   .skeleton {
     animation: none;
