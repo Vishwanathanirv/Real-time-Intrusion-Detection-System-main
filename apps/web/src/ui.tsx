@@ -78,12 +78,12 @@ export function Bars({ rows }: { rows: { label: ReactNode; value: number; hint?:
   return (
     <div className="space-y-2">
       {rows.map((r, i) => (
-        <div key={i} className="grid grid-cols-[minmax(0,8.5rem)_1fr_4.5rem] items-center gap-3">
+        <div key={i} className="grid grid-cols-[minmax(0,8.5rem)_1fr_5.5rem] items-center gap-3">
           <span className="lcd truncate text-[12px]">{r.label}</span>
           <div className="h-2 overflow-hidden rounded-full bg-panel-2" aria-hidden>
             <div className="h-full rounded-full bg-accent" style={{ width: `${Math.max(3, (r.value / max) * 100)}%` }} />
           </div>
-          <span className="lcd text-right text-[11px] text-faint">{r.hint}</span>
+          <span className="lcd truncate text-right text-[11px] text-faint">{r.hint}</span>
         </div>
       ))}
     </div>

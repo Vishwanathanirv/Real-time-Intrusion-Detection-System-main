@@ -360,6 +360,16 @@ body {
     border-radius: 5px;
     color: var(--muted);
   }
+  /* The tool dock scrolls sideways on phones instead of spilling off screen. */
+  .dock {
+    scrollbar-width: none;
+  }
+  .dock::-webkit-scrollbar {
+    display: none;
+  }
+  .dock > * {
+    flex: none;
+  }
   /* The command console. */
   .palette-wrap {
     position: fixed;
@@ -899,6 +909,11 @@ body {
   .console {
     background: color-mix(in oklab, var(--panel-solid) 93%, transparent);
     border-top: 3px solid var(--accent);
+  }
+  @media (max-width: 767px) {
+    .console {
+      background: var(--panel-solid);
+    }
   }
   .dots {
     background-color: var(--bg);

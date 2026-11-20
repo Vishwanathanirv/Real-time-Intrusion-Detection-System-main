@@ -147,7 +147,7 @@ function HostCard({ ip, live, onAlert }: { ip: string; live: Live; onAlert: (a: 
         <h3 className="label">Talking to ({peers.length})</h3>
         {peers.length ? (
           <div className="mt-2">
-            <Bars rows={peers.slice(0, 8).map((e) => ({ label: `${e.src === ip ? "→" : "←"} ${ROLE[e.src === ip ? e.dst : e.src] ?? (e.src === ip ? e.dst : e.src)}`, value: e.bytes, hint: e.ports.length ? `:${e.ports.join(", :")}` : bytes(e.bytes) }))} />
+            <Bars rows={peers.slice(0, 8).map((e) => ({ label: `${e.src === ip ? "→" : "←"} ${ROLE[e.src === ip ? e.dst : e.src] ?? (e.src === ip ? e.dst : e.src)}`, value: e.bytes, hint: e.ports.length ? `:${e.ports.slice(0, 2).join(" :")}` : bytes(e.bytes) }))} />
           </div>
         ) : (
           <p className="mt-1 text-sm text-muted">Quiet for the last minute.</p>
@@ -360,7 +360,7 @@ function Shell() {
       </div>
 
       {/* Tool dock */}
-      <nav className="panel absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 gap-0.5 p-1 md:bottom-auto md:top-3" aria-label="Tools">
+      <nav className="dock panel absolute bottom-3 left-2 right-2 z-20 flex gap-0.5 overflow-x-auto p-1 md:bottom-auto md:left-1/2 md:right-auto md:top-3 md:-translate-x-1/2 md:overflow-visible" aria-label="Tools">
         {TOOLS.map((t, i) => (
           <NavLink key={t.to} to={t.to} end title={`${t.t} (${i + 1})`} className={({ isActive }) => `flex items-center gap-2 rounded-[13px] px-2.5 py-2 text-[13px] font-semibold ${isActive ? "bg-accent text-[var(--accent-ink)]" : "text-muted hover:bg-panel-2 hover:text-ink"}`}>
             <Icon d={t.icon} />
@@ -411,7 +411,7 @@ function Shell() {
       )}
       {/* On phones the inspector is a sheet that appears when you pick something. */}
       {sel && (
-        <aside className="panel rise scroll-y absolute inset-x-2 bottom-[4.5rem] z-30 max-h-[60dvh] p-4 md:hidden" aria-label="Details">
+        <aside className="panel rise scroll-y absolute inset-x-2 bottom-[4.5rem] z-30 max-h-[60dvh] !bg-panel-solid p-4 md:hidden" aria-label="Details">
           <button className="btn absolute right-3 top-3 h-7 px-2 text-xs" onClick={() => setSel(null)}>
             Close
           </button>
@@ -429,7 +429,7 @@ function Shell() {
           {s ? <TrafficChart series={s.series} height={56} onPick={(t) => frames.length > 1 && setReplay({ t: Math.max(frames[0].t, t), playing: true, speed: 2 })} /> : <div className="h-14" />}
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:shrink-0">
-          <select className="field h-9 min-w-0 flex-1 md:w-auto md:flex-none" value={attack} onChange={(e) => setAttack(e.target.value)} aria-label="Attack to simulate" disabled={s?.state.mode !== "simulator"}>
+          <select className="field h-9 min-w-[9.5rem] flex-1 md:w-auto md:flex-none" value={attack} onChange={(e) => setAttack(e.target.value)} aria-label="Attack to simulate" disabled={s?.state.mode !== "simulator"}>
             {(attackList?.attacks ?? []).map((a) => (
               <option key={a.kind} value={a.kind}>
                 {a.label}
