@@ -35,6 +35,32 @@ Beaconing and exfiltration are judged on whole connections, so they fire when th
 
 The traffic is simulated, so these numbers measure the detectors against known patterns, not against every real network. The simulator includes legitimate look-alikes, such as long admin SSH sessions, big file-server transfers and bursts of normal DNS.
 
+## Benchmark on a public dataset
+
+The simulator above measures the detectors against known patterns. To measure the learning parts on traffic nobody here wrote, `npm run benchmark` uses **NSL-KDD**, a public intrusion-detection dataset. It trains on `KDDTrain+` (125,973 connection records) and scores on the official held-out file `KDDTest+` (22,544 records). The held-out file includes 3,750 records from 17 attack types that **never appear in training**. The files are downloaded on the first run (about 23 MB, no login), checked against pinned SHA-256 hashes, and are not committed. Results are written to [`reports/nsl-kdd.json`](reports/nsl-kdd.json).
+
+**Random forest** (written from scratch in TypeScript: 60 trees over the 41 connection features), scored per class on `KDDTest+`:
+
+| Class | Test records | Precision | Recall | False-positive rate |
+| --- | --- | --- | --- | --- |
+| Normal | 9,711 | 64.7% | 97.4% | 40.1% |
+| DoS | 7,460 | 96.2% | 80.1% | 1.6% |
+| Probe | 2,421 | 86.6% | 60.4% | 1.1% |
+| R2L (remote to local) | 2,885 | 96.9% | 1.1% | 0.0% |
+| U2R (user to root) | 67 | 66.7% | 3.0% | 0.0% |
+
+Overall accuracy is 75.1%. Of the attack types never seen in training, 22.2% of records are flagged as some kind of attack. The false-positive rate for "normal" is high because 40.1% of attack records (5,150) are called normal. Over half of those (2,915) are R2L and U2R records, and most of the rest are DoS and probe variants missing from the training file. R2L and U2R attacks look like ordinary logins and file transfers at the connection level. Signatures, brute-force counting and fingerprinting are better at catching them than per-connection statistics.
+
+**Isolation forest**: the same code as the sensor's anomaly detector. It is trained only on normal records and never sees an attack label. Its threshold is fixed beforehand at the 99th percentile of its scores on normal training data.
+
+| Attack records flagged | Overall precision | Overall recall | False-positive rate on normal |
+| --- | --- | --- | --- |
+| DoS 72.5% · Probe 75.4% · R2L 0.5% · U2R 17.9% | 98.8% | 56.5% | 0.9% |
+
+That is a 0.9% false-alarm rate with no labels, but it misses most attacks that look like normal sessions. This is why PacketEye puts behavioural detectors, rules and JA4 next to the anomaly model, instead of relying on it alone.
+
+*Dataset licence:* NSL-KDD is published by the Canadian Institute for Cybersecurity (University of New Brunswick) for research use, citing M. Tavallaee, E. Bagheri, W. Lu and A. Ghorbani, "A Detailed Analysis of the KDD CUP 99 Data Set", IEEE CISDA 2009. It has no open-source licence, so it is downloaded at run time from a public mirror and never stored in this repository. Its traffic is from 1998, so treat these numbers as a reproducible baseline, not as a prediction for a modern network.
+
 ## How it works
 
 ```mermaid
@@ -124,6 +150,7 @@ docker run --network host --cap-add NET_RAW -e CAPTURE_INTERFACE=eth0 packeteye
 
 ```bash
 npm run evaluate                  # SEED=21 MINUTES=45 npm run evaluate
+npm run benchmark                 # NSL-KDD public dataset, about 70 s on one core
 ```
 
 ### API
@@ -147,7 +174,7 @@ npm run evaluate                  # SEED=21 MINUTES=45 npm run evaluate
 
 ```bash
 npm run lint && npm run typecheck
-npm test         # 47 tests
+npm test         # 59 tests
 npm run test:e2e # browser tests on the demo build: every section, a launched attack end to end, the sample pcap, rule validation
 ```
 

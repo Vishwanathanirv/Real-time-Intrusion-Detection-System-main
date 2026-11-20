@@ -17,9 +17,10 @@
     "build": "npm run build -w apps/web && npm run build -w apps/api",
     "start": "node --disable-warning=ExperimentalWarning apps/api/dist/server.js",
     "evaluate": "tsx scripts/evaluate.ts",
+    "benchmark": "tsx benchmarks/nsl-kdd.ts",
     "sample-pcap": "tsx scripts/sample-pcap.ts",
     "test": "vitest run",
-    "typecheck": "tsc -p packages/core && tsc -p apps/api && tsc -p apps/web",
+    "typecheck": "tsc -p packages/core && tsc -p apps/api && tsc -p apps/web && tsc -p benchmarks",
     "lint": "eslint .",
     "build:demo": "npm run build:demo -w apps/web",
     "test:e2e": "npm run build:demo && playwright test"

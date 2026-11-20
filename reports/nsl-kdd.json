@@ -1,0 +1,140 @@
+{
+  "generatedAt": "2026-11-20T01:58:05.759Z",
+  "dataset": "NSL-KDD (KDDTrain+ for training, KDDTest+ held out)",
+  "source": "https://raw.githubusercontent.com/jmnwong/NSL-KDD-Dataset/master",
+  "licence": "Distributed by the Canadian Institute for Cybersecurity, University of New Brunswick, for research use; cite Tavallaee et al., 'A Detailed Analysis of the KDD CUP 99 Data Set', CISDA 2009. Not redistributed in this repository.",
+  "sha256": {
+    "KDDTrain+.txt": "1b86d2f957b33082081bba410fe129b475efebcc13c9014c3f447c8271aadf95",
+    "KDDTest+.txt": "fa46b0935342616aa83b7c2578db355b6a7aaabbc492248172c7a1e8b7ab8f84"
+  },
+  "trainRecords": 125973,
+  "testRecords": 22544,
+  "unseenAttackTypes": [
+    "apache2",
+    "httptunnel",
+    "mailbomb",
+    "mscan",
+    "named",
+    "processtable",
+    "ps",
+    "saint",
+    "sendmail",
+    "snmpgetattack",
+    "snmpguess",
+    "sqlattack",
+    "udpstorm",
+    "worm",
+    "xlock",
+    "xsnoop",
+    "xterm"
+  ],
+  "unseenAttackRecords": 3750,
+  "randomForest": {
+    "perClass": {
+      "normal": {
+        "support": 9711,
+        "precision": 0.6474534501642936,
+        "recall": 0.9739470703326125,
+        "fpr": 0.4013091249123354,
+        "f1": 0.7778280356922571
+      },
+      "dos": {
+        "support": 7460,
+        "precision": 0.9623370352486721,
+        "recall": 0.8014745308310992,
+        "fpr": 0.015513126491646777,
+        "f1": 0.8745703210707233
+      },
+      "probe": {
+        "support": 2421,
+        "precision": 0.8661137440758294,
+        "recall": 0.6038826931020239,
+        "fpr": 0.011230929781841674,
+        "f1": 0.7116086639084935
+      },
+      "r2l": {
+        "support": 2885,
+        "precision": 0.96875,
+        "recall": 0.01074523396880416,
+        "fpr": 0.000050867287247571086,
+        "f1": 0.021254713747000345
+      },
+      "u2r": {
+        "support": 67,
+        "precision": 0.6666666666666666,
+        "recall": 0.029850746268656716,
+        "fpr": 0.000044489923032433154,
+        "f1": 0.05714285714285715
+      }
+    },
+    "confusion": [
+      [
+        9458,
+        67,
+        185,
+        0,
+        1
+      ],
+      [
+        1443,
+        5979,
+        38,
+        0,
+        0
+      ],
+      [
+        792,
+        167,
+        1462,
+        0,
+        0
+      ],
+      [
+        2851,
+        0,
+        3,
+        31,
+        0
+      ],
+      [
+        64,
+        0,
+        0,
+        1,
+        2
+      ]
+    ],
+    "accuracy": 0.7510645848119234,
+    "trainSeconds": 63.8,
+    "unseenAttackDetectionRate": 0.2216
+  },
+  "isolationForest": {
+    "threshold": 0.589518528004123,
+    "precision": 0.988015797358028,
+    "recall": 0.5653393594638821,
+    "fpr": 0.00906188857996087,
+    "byClass": {
+      "normal": {
+        "support": 9711,
+        "flagged": 88
+      },
+      "dos": {
+        "support": 7460,
+        "flagged": 5405
+      },
+      "probe": {
+        "support": 2421,
+        "flagged": 1825
+      },
+      "r2l": {
+        "support": 2885,
+        "flagged": 13
+      },
+      "u2r": {
+        "support": 67,
+        "flagged": 12
+      }
+    }
+  },
+  "seconds": 68.2
+}

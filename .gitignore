@@ -12,3 +12,4 @@ data/
 apps/web/public/evaluation.json
 test-results/
 playwright-report/
+benchmarks/.cache/
