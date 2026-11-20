@@ -1,4 +1,4 @@
-import { StrictMode, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { StrictMode, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate } from "react-router";
 import "@fontsource-variable/hubot-sans/wdth.css";
@@ -15,6 +15,7 @@ import { How } from "./pages/How";
 import { buildReport, encodeReport } from "./report-codec";
 import { Rules } from "./pages/Rules";
 import { Tls } from "./pages/Tls";
+import { Briefing, useBriefing } from "./briefing";
 import { ActionsContext, Plain, usePlainSetting, type Actions } from "./actions";
 import { alertsAt, canReplay, frameAt, incidentWindow, Scrubber, useReplayClock, type Replay } from "./replay";
 import { AlertBody, Bars, SevBadge, Strip, TrafficChart } from "./ui";
@@ -152,6 +153,7 @@ function Shell() {
   const [attack, setAttack] = useState("port_scan");
   const [msg, setMsg] = useState<string | null>(null);
   const [replay, setReplay] = useState<Replay | null>(null);
+  const [briefing, setBriefing] = useBriefing();
   const s = live.stats;
   const frames = live.frames;
   const newest = frames[frames.length - 1]?.t ?? Date.now();
@@ -187,7 +189,8 @@ function Shell() {
       const el = e.target as HTMLElement;
       if (["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName) || e.metaKey || e.ctrlKey) return;
       if (e.key === "Escape") {
-        if (sheet) navigate("/");
+        if (briefing) setBriefing(false);
+        else if (sheet) navigate("/");
         else if (replay) setReplay(null);
         else setSel(null);
       }
@@ -207,18 +210,30 @@ function Shell() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [sheet, navigate, replay, rewind, plain, setPlain]);
+  }, [sheet, navigate, replay, rewind, plain, setPlain, briefing, setBriefing]);
 
-  async function launch() {
+  async function launch(kind = attack, follow = false) {
     setMsg(null);
     try {
-      await api("/api/attacks", { method: "POST", json: { kind: attack } });
-      setMsg(`${attackList?.attacks.find((a) => a.kind === attack)?.label ?? "Attack"} launched. Watch the map.`);
+      await api("/api/attacks", { method: "POST", json: { kind } });
+      if (follow) following.current = Date.now();
+      setMsg(`${attackList?.attacks.find((a) => a.kind === kind)?.label ?? "Attack"} launched. Watch the map.`);
       setTimeout(() => setMsg(null), 4000);
     } catch (e) {
       setMsg((e as Error).message);
     }
   }
+  // "Watch an attack": lock the scope onto the first alert the launched attack raises.
+  const following = useRef(0);
+  useEffect(() => {
+    if (!following.current) return;
+    const hit = live.alerts.find((a) => a.firstSeen >= following.current - 1000);
+    if (hit) {
+      following.current = 0;
+      setSel({ kind: "alert", alert: hit });
+      setInspector(true);
+    }
+  }, [live.alerts]);
   async function setLive(next: { running?: boolean; autopilot?: boolean }) {
     try {
       await api("/api/live", { method: "PUT", json: next });
@@ -239,17 +254,17 @@ function Shell() {
 
   return (
     <ActionsContext.Provider value={actions}>
-    <div className={`relative h-dvh overflow-hidden ${replay ? "replaying" : ""}`}>
+    <div className={`relative h-dvh overflow-hidden ${replay ? "replaying" : ""} ${briefing && !sheet ? "has-briefing" : ""}`}>
       <NetworkMap graph={replay ? frame?.graph : s?.graph} alerts={scopeAlerts} selection={sel} onSelect={pick} tape={replay ? replay.t : undefined} />
 
       {/* Vital signs, with the strip feed under them */}
-      <div className="pointer-events-none absolute left-3 top-3 flex max-h-[calc(100dvh-9rem)] w-[min(19rem,calc(100%-1.5rem))] flex-col gap-2">
+      <div className="hud pointer-events-none absolute left-3 top-3 flex max-h-[calc(100dvh-9rem)] w-[min(19rem,calc(100%-1.5rem))] flex-col gap-2">
       <div className="panel pointer-events-auto shrink-0 p-3">
         <div className="flex items-center gap-2.5">
           <img src="/favicon.svg" alt="" className="h-7 w-7" />
-          <Link to="/" className="display text-[1.1rem] font-bold">
+          <button className="display text-[1.1rem] font-bold" onClick={() => setBriefing(true)} title="What is PacketEye?">
             PacketEye
-          </Link>
+          </button>
           <span className="ml-auto inline-flex items-center gap-1.5 text-xs text-muted" aria-live="polite">
             <span className={`led ${live.connected && s?.state.running !== false ? "" : "led-off"}`} aria-hidden />
             {!live.connected ? "Connecting" : s?.state.running === false ? "Paused" : "Live"}
@@ -310,7 +325,7 @@ function Shell() {
 
       {/* Inspector */}
       {sheet ? null : inspector ? (
-        <aside className="panel scroll-y absolute bottom-[8.5rem] right-3 top-3 z-10 hidden w-[23rem] p-4 md:block lg:bottom-[6.75rem]" aria-label="Inspector">
+        <aside className="hud panel scroll-y absolute bottom-[8.5rem] right-3 top-3 z-10 hidden w-[23rem] p-4 md:block lg:bottom-[6.75rem]" aria-label="Inspector">
           <div className="mb-3 flex items-center justify-between">
             <span className="silk">{sel?.kind === "alert" ? "Alert" : sel?.kind === "host" ? "Host" : "Scope readout"}</span>
             <div className="flex gap-1">
@@ -327,7 +342,7 @@ function Shell() {
           {inspectorBody}
         </aside>
       ) : (
-        <button className="panel absolute right-3 top-3 z-10 hidden px-3 py-2 text-sm font-semibold md:block" onClick={() => setInspector(true)}>
+        <button className="hud panel absolute right-3 top-3 z-10 hidden px-3 py-2 text-sm font-semibold md:block" onClick={() => setInspector(true)}>
           Show inspector
         </button>
       )}
@@ -342,7 +357,7 @@ function Shell() {
       )}
 
       {/* Timeline and attack bar */}
-      <div className="panel absolute bottom-[4.25rem] left-3 right-3 z-10 flex flex-wrap items-center gap-x-4 gap-y-2 p-2.5 md:bottom-3 md:right-[24.75rem] lg:flex-nowrap">
+      <div className="hud panel absolute bottom-[4.25rem] left-3 right-3 z-10 flex flex-wrap items-center gap-x-4 gap-y-2 p-2.5 md:bottom-3 md:right-[24.75rem] lg:flex-nowrap">
         {replay ? (
           <Scrubber frames={frames} alerts={live.alerts} replay={replay} onChange={setReplay} onExit={() => setReplay(null)} />
         ) : (
@@ -358,7 +373,7 @@ function Shell() {
               </option>
             ))}
           </select>
-          <button className="btn btn-accent h-9" onClick={launch} disabled={s?.state.mode !== "simulator"}>
+          <button className="btn btn-accent h-9" onClick={() => void launch()} disabled={s?.state.mode !== "simulator"}>
             Launch
           </button>
           <Link to="/lab" className="btn h-9" title="What-if lab (3)">
@@ -376,6 +391,21 @@ function Shell() {
         )}
         {msg && <p className="w-full text-xs text-muted" aria-live="polite">{msg}</p>}
       </div>
+
+      {briefing && !sheet && (
+        <Briefing
+          onWatch={() => {
+            setBriefing(false);
+            setAttack("port_scan");
+            void launch("port_scan", true);
+          }}
+          onExplain={() => {
+            setBriefing(false);
+            setPlain(true);
+          }}
+          onClose={() => setBriefing(false)}
+        />
+      )}
 
       {/* A tool's sheet, floating over the map */}
       {sheet && (

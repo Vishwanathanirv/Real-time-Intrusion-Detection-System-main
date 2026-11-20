@@ -268,6 +268,98 @@ body {
   .capitalize-first::first-letter {
     text-transform: uppercase;
   }
+  /* The first-screen briefing, over the live scope. */
+  .has-briefing .hud {
+    display: none !important;
+  }
+  .briefing {
+    position: absolute;
+    inset: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    padding: 5rem clamp(1rem, 4vw, 4rem) 6rem;
+    background: linear-gradient(90deg, var(--bg) 0%, color-mix(in oklab, var(--bg) 92%, transparent) 38%, color-mix(in oklab, var(--bg) 35%, transparent) 70%, transparent 100%);
+    overflow-y: auto;
+    animation: rise 0.5s var(--spring);
+  }
+  @media (max-width: 767px) {
+    .briefing {
+      align-items: flex-start;
+      padding-top: 1.25rem;
+      padding-bottom: 5rem;
+      background: color-mix(in oklab, var(--bg) 90%, transparent);
+    }
+  }
+  .briefing-inner {
+    max-width: 36rem;
+  }
+  .briefing-eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    color: var(--accent);
+  }
+  .briefing-title {
+    margin-top: 0.8rem;
+    font-size: clamp(2.3rem, 5.4vw, 4.3rem);
+    line-height: 0.95;
+    font-weight: 800;
+    font-stretch: 125%;
+    letter-spacing: -0.035em;
+    text-wrap: balance;
+  }
+  .briefing-points {
+    display: grid;
+    gap: 1rem;
+    margin-top: 1.6rem;
+  }
+  .briefing-points > div {
+    display: grid;
+    grid-template-columns: 8.5rem minmax(0, 1fr);
+    gap: 1rem;
+    padding-top: 0.9rem;
+    border-top: 1px dashed var(--line);
+  }
+  @media (max-width: 520px) {
+    .briefing-points > div {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0.2rem;
+    }
+  }
+  .briefing-points dt {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--faint);
+    padding-top: 0.2rem;
+  }
+  .briefing-points dd {
+    font-size: 1rem;
+    line-height: 1.55;
+    color: var(--ink);
+  }
+  .briefing-skip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1.2rem;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .briefing-skip:hover {
+    color: var(--ink);
+  }
+  kbd {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    padding: 0.05rem 0.35rem;
+    border: 1px solid var(--line);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    color: var(--muted);
+  }
   /* How it works: the pipeline as range rings. */
   .how {
     background: radial-gradient(900px 600px at 25% 40%, color-mix(in oklab, var(--accent) 7%, transparent), transparent), var(--bg);
@@ -826,6 +918,7 @@ body {
   .alarm,
   .row-new,
   .rise,
+  .briefing,
   .plain,
   .skeleton {
     animation: none;

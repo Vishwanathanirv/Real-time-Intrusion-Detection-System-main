@@ -1,5 +1,10 @@
 import { expect, test } from "@playwright/test";
 
+// Returning visitors skip the first-screen briefing; one test below checks it as a first-timer.
+test.beforeEach(async ({ page }, info) => {
+  if (!info.title.startsWith("first screen")) await page.addInitScript(() => localStorage.setItem("packeteye-briefed", "1"));
+});
+
 test("every tool opens over the map without errors", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
@@ -202,4 +207,23 @@ test("how it works follows one real packet from the wire to the alert board", as
   await page.getByRole("button", { name: "Launch this implant on the live scope" }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole("img", { name: /Network map/ })).toBeVisible();
+});
+
+test("first screen: a first-time visitor gets the idea, then watches an attack get caught", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: "See attacks the way radar sees aircraft." })).toBeVisible();
+  for (const t of ["The problem", "The idea", "Why it's different"]) await expect(page.getByText(t, { exact: true })).toBeVisible();
+  await expect(page.getByRole("img", { name: /Network map/ })).toBeVisible();
+  await page.getByRole("button", { name: "Watch an attack get caught →" }).click();
+  await expect(page.getByRole("heading", { name: "See attacks the way radar sees aircraft." })).toHaveCount(0);
+  // The scope locks onto the attack's alert by itself.
+  const inspector = page.getByRole("complementary", { name: "Inspector" });
+  await expect(inspector).toContainText("T1046", { timeout: 30_000 });
+  // It does not come back on the next visit, but the logo brings it back.
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "See attacks the way radar sees aircraft." })).toHaveCount(0);
+  await page.getByRole("button", { name: "PacketEye" }).click();
+  await expect(page.getByRole("heading", { name: "See attacks the way radar sees aircraft." })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("heading", { name: "See attacks the way radar sees aircraft." })).toHaveCount(0);
 });
