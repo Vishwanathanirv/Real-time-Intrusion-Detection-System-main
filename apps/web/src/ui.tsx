@@ -63,8 +63,8 @@ export function TrafficChart({ series, height = 160, onPick }: { series: { t: nu
         {series.map((s, i) => (s.alerts ? <line key={s.t} x1={x(i)} x2={x(i)} y1={0} y2={H} stroke="var(--bad)" strokeWidth={2} vectorEffect="non-scaling-stroke" /> : null))}
         {onPick &&
           series.map((s, i) => (
-            <rect key={`h${s.t}`} x={x(i) - W / series.length / 2} width={W / series.length} y={0} height={H} fill="transparent" onClick={() => onPick(s.t)}>
-              <title>{`${new Date(s.t).toLocaleTimeString("en-IN", { hour12: false })}: ${s.packets} packets${s.alerts ? `, ${s.alerts} alert${s.alerts > 1 ? "s" : ""}` : ""}`}</title>
+            <rect key={`h${s.t}`} x={x(i) - W / series.length / 2} width={W / series.length} y={0} height={H} fill="transparent" className="cursor-pointer" onClick={() => onPick(s.t)}>
+              <title>{`${new Date(s.t).toLocaleTimeString("en-IN", { hour12: false })}: ${s.packets} packets${s.alerts ? `, ${s.alerts} alert${s.alerts > 1 ? "s" : ""}` : ""}. Click to rewind to here.`}</title>
             </rect>
           ))}
       </svg>

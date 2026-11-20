@@ -24,14 +24,15 @@ import type { Alert, Stats } from "../lib";
  * In-browser version of the PacketEye server, used for the hosted demo. The simulated office
  * network, flow table, detectors and isolation forest are the same code the Node sensor runs;
  * only the transport is different (events instead of a WebSocket). Each visitor gets a private
- * sandbox, and uploaded captures are analysed locally without leaving the machine.
+ * sandbox, and uploaded captures are analysed locally without leaving the machine. It runs in a
+ * Web Worker (see worker.ts), so the page stays responsive while it trains and replays traffic.
  */
 
 type Message = { type: string; data: unknown };
 type Listener = (m: Message) => void;
 type State = Stats["state"];
 
-class DemoSensor {
+export class DemoSensor {
   private config: DetectorConfig = structuredClone(DEFAULT_CONFIG);
   private model!: IForestModel;
   sensor!: Sensor;
@@ -281,5 +282,3 @@ class DemoSensor {
 
 const ok = (data: unknown) => ({ status: 200, data });
 const err = (status: number, error: string) => ({ status, data: { error } });
-
-export const demo = new DemoSensor();

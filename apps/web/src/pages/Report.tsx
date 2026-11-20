@@ -94,7 +94,10 @@ export function Report() {
         .catch(() => setState({ error: "This link doesn't contain a readable incident report. It may have been cut short when it was copied." }));
     void load();
     window.addEventListener("hashchange", load);
-    return () => window.removeEventListener("hashchange", load);
+    return () => {
+      window.removeEventListener("hashchange", load);
+      document.title = "PacketEye · Sonar for your network";
+    };
   }, []);
   const r = state.report;
   const a = r?.alert;

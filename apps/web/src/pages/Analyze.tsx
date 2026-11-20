@@ -31,7 +31,7 @@ export function Analyze() {
     setResult(null);
     try {
       if (DEMO) {
-        const { demo } = await import("../demo/server");
+        const { demo } = await import("../demo/client");
         setResult(await demo.analyze(file));
         return;
       }
@@ -49,7 +49,7 @@ export function Analyze() {
   }
 
   async function sampleBlob() {
-    if (DEMO) return (await import("../demo/server")).demo.samplePcap();
+    if (DEMO) return (await import("../demo/client")).demo.samplePcap();
     return (await fetch("/api/pcap/sample")).blob();
   }
 

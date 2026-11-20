@@ -1,4 +1,4 @@
-import { StrictMode, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { lazy, StrictMode, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate } from "react-router";
 import "@fontsource-variable/hubot-sans/wdth.css";
@@ -6,15 +6,27 @@ import "@fontsource-variable/martian-mono";
 import "./index.css";
 import { api, bytes, num, useLive, usePoll, type Alert } from "./lib";
 import { hostOf, NetworkMap, ROLE, type Selection } from "./map";
-import { Alerts } from "./pages/Alerts";
-import { Analyze } from "./pages/Analyze";
-import { Detection } from "./pages/Detection";
-import { Lab } from "./pages/Lab";
-import { Report } from "./pages/Report";
-import { How } from "./pages/How";
 import { buildReport, encodeReport } from "./report-codec";
-import { Rules } from "./pages/Rules";
-import { Tls } from "./pages/Tls";
+
+// Each tool loads when it is first opened, so the scope paints first.
+const Alerts = lazy(() => import("./pages/Alerts").then((m) => ({ default: m.Alerts })));
+const Analyze = lazy(() => import("./pages/Analyze").then((m) => ({ default: m.Analyze })));
+const Detection = lazy(() => import("./pages/Detection").then((m) => ({ default: m.Detection })));
+const Lab = lazy(() => import("./pages/Lab").then((m) => ({ default: m.Lab })));
+const Report = lazy(() => import("./pages/Report").then((m) => ({ default: m.Report })));
+const How = lazy(() => import("./pages/How").then((m) => ({ default: m.How })));
+const Rules = lazy(() => import("./pages/Rules").then((m) => ({ default: m.Rules })));
+const Tls = lazy(() => import("./pages/Tls").then((m) => ({ default: m.Tls })));
+
+function Loading() {
+  return (
+    <div className="space-y-3 p-1" aria-label="Loading">
+      <div className="skeleton h-9 w-1/3" />
+      <div className="skeleton h-5 w-2/3" />
+      <div className="skeleton h-48" />
+    </div>
+  );
+}
 import { Briefing, useBriefing } from "./briefing";
 import { Palette, type Command } from "./palette";
 import { useSonar } from "./sound";
@@ -414,7 +426,7 @@ function Shell() {
         ) : (
           <>
         <div className="min-w-0 flex-1 basis-60">
-          {s ? <TrafficChart series={s.series} height={56} /> : <div className="h-14" />}
+          {s ? <TrafficChart series={s.series} height={56} onPick={(t) => frames.length > 1 && setReplay({ t: Math.max(frames[0].t, t), playing: true, speed: 2 })} /> : <div className="h-14" />}
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:shrink-0">
           <select className="field h-9 min-w-0 flex-1 md:w-auto md:flex-none" value={attack} onChange={(e) => setAttack(e.target.value)} aria-label="Attack to simulate" disabled={s?.state.mode !== "simulator"}>
@@ -466,6 +478,7 @@ function Shell() {
           <button className="btn absolute right-4 top-4 h-8 px-2.5" onClick={() => navigate("/")} aria-label="Close and go back to the map">
             ✕
           </button>
+          <Suspense fallback={<Loading />}>
           <Routes>
             <Route path="/alerts" element={<Alerts onOpen={(a) => { pick({ kind: "alert", alert: a }); navigate("/"); }} />} />
             <Route path="/analyze" element={<Analyze />} />
@@ -475,6 +488,7 @@ function Shell() {
             <Route path="/detection" element={<Detection />} />
             <Route path="*" element={<p className="text-muted">There's no tool here. Pick one from the dock.</p>} />
           </Routes>
+          </Suspense>
         </section>
       )}
     </div>
@@ -485,11 +499,13 @@ function Shell() {
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>
-      <Routes>
-        <Route path="/report" element={<Report />} />
-        <Route path="/how" element={<How />} />
-        <Route path="*" element={<Shell />} />
-      </Routes>
+      <Suspense fallback={<div className="h-dvh bg-bg" />}>
+        <Routes>
+          <Route path="/report" element={<Report />} />
+          <Route path="/how" element={<How />} />
+          <Route path="*" element={<Shell />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   </StrictMode>,
 );

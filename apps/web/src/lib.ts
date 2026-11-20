@@ -40,7 +40,7 @@ export const DEMO = import.meta.env.VITE_DEMO === "1";
 
 export async function api<T>(path: string, init?: RequestInit & { json?: unknown }): Promise<T> {
   if (DEMO) {
-    const { demo } = await import("./demo/server");
+    const { demo } = await import("./demo/client");
     const r = await demo.handle(init?.method ?? "GET", path, init?.json);
     if (r.status >= 400) throw Object.assign(new Error((r.data as { error?: string }).error ?? `Request failed (${r.status})`), { details: r.data });
     return r.data as T;
@@ -93,7 +93,7 @@ export function useLive() {
     };
     if (DEMO) {
       let unsub: (() => void) | null = null;
-      void import("./demo/server")
+      void import("./demo/client")
         .then(({ demo }) => demo.subscribe(onMessage))
         .then((u) => {
           if (stop) u();
