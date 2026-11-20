@@ -9,53 +9,8 @@
  * Teal is normal traffic, coral is an attack; nothing else is coloured, so an attack is the
  * brightest thing on screen.
  */
+/* One theme: the dark of a radar room. */
 :root {
-  --bg: #eef3f7;
-  --dot: #cdd9e3;
-  --panel: rgba(255, 255, 255, 0.86);
-  --panel-solid: #ffffff;
-  --panel-2: #e8eff5;
-  --line: #d3dee7;
-  --ink: #0f1c2a;
-  --muted: #4c5e70;
-  --faint: #8597a8;
-  --accent: #0a8f9c;
-  --accent-soft: rgba(10, 143, 156, 0.12);
-  --accent-ink: #ffffff;
-  --ok: #0a8f9c;
-  --warn: #c47a00;
-  --bad: #e23d5c;
-  --bad-soft: rgba(226, 61, 92, 0.12);
-  --node: #23384d;
-  --node-ext: #7a8fa3;
-  --shadow: 0 1px 2px rgba(15, 28, 42, 0.08), 0 14px 36px -14px rgba(15, 28, 42, 0.28);
-  color-scheme: light;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #08111c;
-    --dot: #142233;
-    --panel: rgba(13, 24, 37, 0.84);
-    --panel-solid: #0e1a28;
-    --panel-2: #142336;
-    --line: #1d3047;
-    --ink: #e4eef7;
-    --muted: #94a9bd;
-    --faint: #5e748a;
-    --accent: #3fe0d0;
-    --accent-soft: rgba(63, 224, 208, 0.13);
-    --accent-ink: #04201d;
-    --ok: #3fe0d0;
-    --warn: #ffb547;
-    --bad: #ff5577;
-    --bad-soft: rgba(255, 85, 119, 0.14);
-    --node: #c9dcec;
-    --node-ext: #4d6680;
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 18px 44px -16px rgba(0, 0, 0, 0.85);
-    color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
   --bg: #08111c;
   --dot: #142233;
   --panel: rgba(13, 24, 37, 0.84);
@@ -64,7 +19,7 @@
   --line: #1d3047;
   --ink: #e4eef7;
   --muted: #94a9bd;
-  --faint: #5e748a;
+  --faint: #6d849b;
   --accent: #3fe0d0;
   --accent-soft: rgba(63, 224, 208, 0.13);
   --accent-ink: #04201d;

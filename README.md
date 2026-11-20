@@ -12,7 +12,6 @@ It is built **end to end in TypeScript**: a pcap parser, TLS ClientHello parsing
 
 ![The sonar scope](docs/screenshots/overview.png)
 
-> Version 2 is a full rebuild. The original Python, Spring Boot and React version is kept on the [`v1-original`](https://github.com/Vishwanathanirv/real-time-intrusion-detection-system-main/tree/v1-original) branch.
 
 ## Measured detection
 
@@ -108,7 +107,7 @@ The app is a **sonar scope for the network** that fills the screen. Every host i
 - **Strip feed:** the latest alerts as flight strips. Click one and the scope locks onto its two hosts while the inspector explains it.
 - **Inspector:** the network right now (busiest hosts, protocols and ports), or a host you clicked (its alerts and who it talks to, with ports), or an alert (MITRE technique, evidence, what to do, acknowledge or resolve with a note).
 - **Timeline:** the last two minutes of traffic with a tick where each alert fired, plus attack launch, pause and autopilot.
-- **Tool dock:** each tool opens as a sheet floating over the map, so the live view never goes away. Number keys 1 to 6 switch tools and Esc goes back to the map. Pan by dragging, zoom with the wheel or the buttons. Light and dark, and it works on a phone.
+- **Tool dock:** each tool opens as a sheet floating over the map, so the live view never goes away. Number keys 1 to 6 switch tools and Esc goes back to the map. Pan by dragging, zoom with the wheel or the buttons. One dark theme, and it works on a phone.
 
 - **TLS clients:** an inventory of every TLS fingerprint on the network, rarest first, with the hosts using it, server names and what the software looks like.
 - **Rules:** edit the Suricata ruleset in the browser. Bad rules are rejected with line numbers; each loaded rule shows how many packets it has matched.
@@ -126,11 +125,9 @@ The app is a **sonar scope for the network** that fills the screen. Every host i
 
 ## Run it
 
-You need Node 22.13 or newer.
+You need Node 22.13 or newer. From a copy of the repository:
 
 ```bash
-git clone https://github.com/Vishwanathanirv/real-time-intrusion-detection-system-main.git
-cd real-time-intrusion-detection-system-main
 npm install
 npm run build && npm start        # http://localhost:8080 (simulator mode)
 ```

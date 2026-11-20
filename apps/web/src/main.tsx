@@ -31,26 +31,6 @@ function Icon({ d, className = "h-[18px] w-[18px]" }: { d: string; className?: s
   );
 }
 
-function useTheme(): [string, () => void] {
-  const [t, setT] = useState(() => {
-    try {
-      return localStorage.getItem("packeteye-theme") ?? "system";
-    } catch {
-      return "system";
-    }
-  });
-  useEffect(() => {
-    if (t === "system") delete document.documentElement.dataset.theme;
-    else document.documentElement.dataset.theme = t;
-    try {
-      localStorage.setItem("packeteye-theme", t);
-    } catch {
-      /* private mode */
-    }
-  }, [t]);
-  return [t, () => setT(t === "system" ? "dark" : t === "dark" ? "light" : "system")];
-}
-
 type Live = ReturnType<typeof useLive>;
 
 /** What the right-hand inspector shows when nothing is selected: the network right now. */
@@ -90,10 +70,7 @@ function NetworkNow({ live }: { live: Live }) {
         </div>
       </section>
       <p className="border-t border-line pt-3 text-xs text-faint">
-        For networks you own or may monitor.{" "}
-        <a href="https://github.com/Vishwanathanirv/real-time-intrusion-detection-system-main" className="underline underline-offset-2">
-          Source
-        </a>
+        For networks you own or may monitor.
       </p>
     </div>
   );
@@ -160,7 +137,6 @@ function Shell() {
   const live = useLive();
   const loc = useLocation();
   const navigate = useNavigate();
-  const [theme, cycleTheme] = useTheme();
   const [sel, setSel] = useState<Selection>(null);
   const [inspector, setInspector] = useState(true);
   const { data: attackList } = usePoll<{ attacks: { kind: string; label: string }[] }>("/api/attacks", 0);
@@ -268,9 +244,6 @@ function Shell() {
             <span className="hidden 2xl:inline">{t.t}</span>
           </NavLink>
         ))}
-        <button className="flex items-center rounded-[13px] px-2.5 py-2 text-muted hover:bg-panel-2 hover:text-ink" onClick={cycleTheme} title={`Theme: ${theme}`} aria-label={`Theme: ${theme}. Change theme`}>
-          <Icon d="M12 3a9 9 0 1 0 0 18zM12 3a9 9 0 0 1 0 18" />
-        </button>
       </nav>
 
       {/* Inspector */}
