@@ -11,6 +11,8 @@ const LINK_ETHERNET = 1;
 const LINK_RAW = 101;
 const LINK_RAW_ALT = 228;
 const LINK_LINUX_SLL = 113;
+/** Written by tcpdump 4.99+ for `-i any`. */
+const LINK_LINUX_SLL2 = 276;
 
 const ip4 = (b: Uint8Array, o: number) => `${b[o]}.${b[o + 1]}.${b[o + 2]}.${b[o + 3]}`;
 
@@ -53,11 +55,20 @@ export function decodeFrame(frame: Uint8Array, linkType: number, ts: number, wir
   } else if (linkType === LINK_LINUX_SLL) {
     if (frame.length < 16 || ((frame[14] << 8) | frame[15]) !== 0x0800) return null;
     o = 16;
+  } else if (linkType === LINK_LINUX_SLL2) {
+    if (frame.length < 20 || ((frame[0] << 8) | frame[1]) !== 0x0800) return null;
+    o = 20;
   } else if (linkType !== LINK_RAW && linkType !== LINK_RAW_ALT) return null;
 
   if (frame.length < o + 20 || frame[o] >> 4 !== 4) return null;
   const ihl = (frame[o] & 0x0f) * 4;
-  const totalLen = (frame[o + 2] << 8) | frame[o + 3];
+  if (ihl < 20) return null;
+  // A total length of 0 is what Linux records for TCP segmentation offload; fall back to the captured bytes.
+  const hdrLen = (frame[o + 2] << 8) | frame[o + 3];
+  const totalLen = hdrLen === 0 ? frame.length - o : hdrLen;
+  if (totalLen < ihl) return null;
+  // Later fragments carry no transport header: reading "ports" from them would invent traffic.
+  if ((((frame[o + 6] & 0x1f) << 8) | frame[o + 7]) !== 0) return null;
   const protoNum = frame[o + 9];
   const ttl = frame[o + 8];
   const src = ip4(frame, o + 12);
@@ -77,6 +88,7 @@ export function decodeFrame(frame: Uint8Array, linkType: number, ts: number, wir
     sport = (frame[l4] << 8) | frame[l4 + 1];
     dport = (frame[l4 + 2] << 8) | frame[l4 + 3];
     const dataOff = (frame[l4 + 12] >> 4) * 4;
+    if (dataOff < 20) return null;
     flags = frame[l4 + 13] & 0x3f;
     payload = Math.max(0, totalLen - ihl - dataOff);
     const ps = l4 + dataOff;

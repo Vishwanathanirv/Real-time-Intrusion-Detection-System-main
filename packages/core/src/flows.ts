@@ -7,7 +7,9 @@ import { TCP, type Flow, type Packet } from "./types";
 export class FlowTable {
   private flows = new Map<string, Flow>();
   private seq = 0;
-  constructor(private onClose: (f: Flow) => void, private idleMs = 30_000, private activeMs = 120_000) {}
+  /** Flows evicted early because the table was full (e.g. under a spoofed-source flood). */
+  evicted = 0;
+  constructor(private onClose: (f: Flow) => void, private idleMs = 30_000, private activeMs = 120_000, private maxFlows = 250_000) {}
 
   get active() {
     return this.flows.size;
@@ -47,6 +49,13 @@ export class FlowTable {
         fin: 0,
         established: false,
       };
+      if (this.flows.size >= this.maxFlows) {
+        // Bounded memory: evict the oldest flow (Map keeps insertion order) instead of growing without limit.
+        const [oldKey, oldest] = this.flows.entries().next().value!;
+        this.flows.delete(oldKey);
+        this.evicted++;
+        this.onClose(oldest);
+      }
       this.flows.set(this.key(p), f);
       forward = true;
     }
@@ -77,7 +86,8 @@ export class FlowTable {
   }
 
   private close(f: Flow) {
-    for (const [k, v] of this.flows) if (v === f) this.flows.delete(k);
+    // Flows are stored only under their initiator's key, so closing is O(1).
+    this.flows.delete(`${f.proto}|${f.src}:${f.sport}|${f.dst}:${f.dport}`);
     this.onClose(f);
   }
 
