@@ -9,6 +9,7 @@ import { hostOf, NetworkMap, ROLE, type Selection } from "./map";
 import { Alerts } from "./pages/Alerts";
 import { Analyze } from "./pages/Analyze";
 import { Detection } from "./pages/Detection";
+import { Lab } from "./pages/Lab";
 import { Rules } from "./pages/Rules";
 import { Tls } from "./pages/Tls";
 import { ActionsContext, type Actions } from "./actions";
@@ -19,6 +20,7 @@ import { AlertBody, Bars, SevBadge, Strip, TrafficChart } from "./ui";
 const TOOLS: { to: string; t: string; icon: string }[] = [
   { to: "/", t: "Map", icon: "M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14" },
   { to: "/alerts", t: "Alerts", icon: "M12 3l9 16H3zM12 10v4M12 17h.01" },
+  { to: "/lab", t: "What-if lab", icon: "M9 3h6M10 3v6L4 19a1 1 0 0 0 .9 1.5h14.2A1 1 0 0 0 20 19l-6-10V3M7 14h10" },
   { to: "/tls", t: "TLS clients", icon: "M6 11V8a6 6 0 0 1 12 0v3M5 11h14v10H5zM12 15v2" },
   { to: "/rules", t: "Rules", icon: "M5 4h14v16H5zM8 8h8M8 12h8M8 16h5" },
   { to: "/analyze", t: "Analyse a pcap", icon: "M12 3v12M7 10l5 5 5-5M4 19h16" },
@@ -338,6 +340,9 @@ function Shell() {
           <button className="btn btn-accent h-9" onClick={launch} disabled={s?.state.mode !== "simulator"}>
             Launch
           </button>
+          <Link to="/lab" className="btn h-9" title="What-if lab (3)">
+            What if…?
+          </Link>
           <button className="btn h-9" onClick={() => setLive({ running: !(s?.state.running ?? true) })} disabled={!s}>
             {s?.state.running === false ? "Resume" : "Pause"}
           </button>
@@ -360,6 +365,7 @@ function Shell() {
           <Routes>
             <Route path="/alerts" element={<Alerts onOpen={(a) => { pick({ kind: "alert", alert: a }); navigate("/"); }} />} />
             <Route path="/analyze" element={<Analyze />} />
+            <Route path="/lab" element={<Lab live={s?.state.mode === "simulator"} />} />
             <Route path="/tls" element={<Tls />} />
             <Route path="/rules" element={<Rules />} />
             <Route path="/detection" element={<Detection />} />

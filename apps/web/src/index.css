@@ -53,6 +53,10 @@
   --font-mono: "Martian Mono Variable", ui-monospace, monospace;
 }
 
+:root {
+  --spring: linear(0, 0.006, 0.025 2.8%, 0.101 6.1%, 0.539 18.9%, 0.721 25.3%, 0.849 31.5%, 0.937 38.1%, 0.968 41.8%, 0.991 45.7%, 1.006 50.1%, 1.015 55%, 1.017 63.9%, 1.001 85.9%, 1);
+}
+
 html,
 body,
 #root {
@@ -153,6 +157,89 @@ body {
   }
   .btn-warn:hover:not(:disabled) {
     border-color: var(--warn);
+  }
+  /* Callsign chips: pick one attack. */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    height: 2.1rem;
+    padding: 0 0.75rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--panel-solid);
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: var(--muted);
+    transition: color 0.15s, border-color 0.15s, transform 0.25s var(--spring);
+  }
+  .chip:hover {
+    color: var(--ink);
+  }
+  .chip:active {
+    transform: scale(0.96);
+  }
+  .chip-on {
+    color: var(--accent-ink);
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  /* Range sliders styled as console dials. */
+  .dial {
+    width: 100%;
+    appearance: none;
+    height: 22px;
+    background: transparent;
+    cursor: pointer;
+  }
+  .dial::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 99px;
+    background: repeating-linear-gradient(90deg, var(--line) 0 2px, var(--panel-2) 2px 9px);
+  }
+  .dial::-moz-range-track {
+    height: 6px;
+    border-radius: 99px;
+    background: repeating-linear-gradient(90deg, var(--line) 0 2px, var(--panel-2) 2px 9px);
+  }
+  .dial::-webkit-slider-thumb {
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    margin-top: -6px;
+    border-radius: 99px;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-soft);
+    transition: transform 0.25s var(--spring);
+  }
+  .dial::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border: 0;
+    border-radius: 99px;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-soft);
+  }
+  .dial:active::-webkit-slider-thumb {
+    transform: scale(1.2);
+  }
+  .verdict {
+    font-size: clamp(1.6rem, 3.2vw, 2.4rem);
+    font-weight: 800;
+    font-stretch: 125%;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+  }
+  .lab-result {
+    transition: opacity 0.2s;
+  }
+  .lab-result.is-busy {
+    opacity: 0.6;
+  }
+  .skeleton {
+    border-radius: 10px;
+    background: linear-gradient(100deg, var(--panel-2) 40%, color-mix(in oklab, var(--panel-2) 70%, var(--line)) 50%, var(--panel-2) 60%) 0 0 / 300% 100%;
+    animation: shimmer 1.4s linear infinite;
   }
   /* Rewind: the scope plays back like tape, so it turns amber. */
   .tape-badge {
@@ -373,6 +460,11 @@ body {
   animation: sweep 6s linear infinite;
   transform-origin: 0 0;
 }
+@keyframes shimmer {
+  to {
+    background-position: -150% 0;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .sweep {
     display: none;
@@ -381,7 +473,13 @@ body {
   .flow,
   .alarm,
   .row-new,
-  .rise {
+  .rise,
+  .skeleton {
     animation: none;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
   }
 }

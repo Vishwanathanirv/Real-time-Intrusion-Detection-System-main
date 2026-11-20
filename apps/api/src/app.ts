@@ -126,8 +126,8 @@ export async function buildApp(opts: AppOptions = {}): Promise<{ app: FastifyIns
 
   app.post("/api/attacks", { config: { rateLimit: { max: 20, timeWindow: "1 minute" } } }, async (req) => {
     requireAdmin(req.headers.authorization);
-    const { kind } = z.object({ kind: z.enum(ATTACKS as [string, ...string[]]) }).parse(req.body);
-    return { attack: live.launch(kind as (typeof ATTACKS)[number]) };
+    const { kind, stretch } = z.object({ kind: z.enum(ATTACKS as [string, ...string[]]), stretch: z.number().min(1).max(30).optional() }).parse(req.body);
+    return { attack: live.launch(kind as (typeof ATTACKS)[number], stretch) };
   });
 
   app.put("/api/live", async (req) => {

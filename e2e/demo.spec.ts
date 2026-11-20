@@ -124,3 +124,18 @@ test("Rewind replays an incident on the scope and returns to live", async ({ pag
   await page.keyboard.press("l");
   await expect(tape).toBeHidden();
 });
+
+test("the what-if lab shows a slowed-down attack slipping through, then runs it live", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("link", { name: "What if…?" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "What-if lab" })).toBeVisible();
+  await page.getByRole("radio", { name: /SYN flood/ }).click();
+  await expect(page.getByText(/^Caught in /)).toBeVisible({ timeout: 30_000 });
+  await page.getByLabel("Attacker patience: how many times slower").fill("12");
+  await expect(page.getByText("Slipped through")).toBeVisible({ timeout: 30_000 });
+  // Lower the threshold until the patient flood is caught again.
+  await page.getByLabel(/^Threshold: SYN packets per second/).fill("20");
+  await expect(page.getByText(/^Caught in /)).toBeVisible({ timeout: 30_000 });
+  await page.getByRole("button", { name: "Run it on the live scope" }).click();
+  await expect(page.getByText(/launched on the live scope, 12× slower/)).toBeVisible();
+});

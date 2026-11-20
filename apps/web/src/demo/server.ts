@@ -126,10 +126,11 @@ class DemoSensor {
     return { ...this.sensor.stats(now), state: this.state, avgMicrosPerPacket: +(this.sensor.avgNsPerPacket / 1000).toFixed(2) };
   }
 
-  launch(kind: AttackKind) {
+  /** `stretch` slows the attacker down (the what-if lab's "low and slow" setting), up to four minutes. */
+  launch(kind: AttackKind, stretch = 1) {
     const a = this.sim.attack(kind, Date.now() + 200);
     const span = a.end - a.start;
-    const factor = span > 90_000 ? 90_000 / span : 1;
+    const factor = stretch > 1 ? Math.min(stretch, 240_000 / Math.max(1, span)) : span > 90_000 ? 90_000 / span : 1;
     for (const p of a.packets) this.queue.push({ ...p, ts: a.start + (p.ts - a.start) * factor });
     const info = { id: a.id, kind, endsAt: a.start + span * factor + 2_000 };
     this.state.activeAttacks.push(info);
@@ -182,9 +183,10 @@ class DemoSensor {
     }
     if (method === "GET" && p === "/api/attacks") return ok({ attacks: ATTACKS.map((k) => ({ kind: k, label: ATTACK_LABELS[k] })), active: this.state.activeAttacks });
     if (method === "POST" && p === "/api/attacks") {
-      const kind = (body as { kind?: string })?.kind as AttackKind;
-      if (!ATTACKS.includes(kind)) return err(400, "kind: unknown attack");
-      return ok({ attack: this.launch(kind) });
+      const { kind, stretch } = (body ?? {}) as { kind?: AttackKind; stretch?: number };
+      if (!kind || !ATTACKS.includes(kind)) return err(400, "kind: unknown attack");
+      if (stretch !== undefined && !(typeof stretch === "number" && stretch >= 1 && stretch <= 30)) return err(400, "stretch: between 1 and 30");
+      return ok({ attack: this.launch(kind, stretch) });
     }
     if (method === "PUT" && p === "/api/live") {
       const b = (body ?? {}) as { autopilot?: boolean; running?: boolean };

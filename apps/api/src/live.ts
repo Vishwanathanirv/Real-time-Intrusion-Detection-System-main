@@ -75,12 +75,13 @@ export class LiveSensor extends EventEmitter {
   }
 
   /** Schedules an attack to unfold in real time from now. */
-  launch(kind: AttackKind) {
+  /** `stretch` slows the attacker down (the what-if lab's "low and slow" setting), up to four minutes. */
+  launch(kind: AttackKind, stretch = 1) {
     if (this.state.mode !== "simulator") throw new Error("Attacks can only be simulated in simulator mode.");
     const a = this.sim.attack(kind, Date.now() + 200);
     // Long campaigns are compressed so the demo stays snappy.
     const span = a.end - a.start;
-    const factor = span > 90_000 ? 90_000 / span : 1;
+    const factor = stretch > 1 ? Math.min(stretch, 240_000 / Math.max(1, span)) : span > 90_000 ? 90_000 / span : 1;
     for (const p of a.packets) this.queue.push({ ...p, ts: a.start + (p.ts - a.start) * factor });
     const info = { id: a.id, kind, endsAt: a.start + span * factor + 2_000 };
     this.state.activeAttacks.push(info);

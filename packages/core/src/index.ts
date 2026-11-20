@@ -11,3 +11,4 @@ export * from "./tls";
 export * from "./rules";
 export * from "./default-rules";
 export * from "./recorder";
+export * from "./whatif";
