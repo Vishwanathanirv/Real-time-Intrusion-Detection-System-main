@@ -95,3 +95,32 @@ test("the scope works on a phone without horizontal scrolling", async ({ page })
   await expect(page.getByRole("navigation", { name: "Tools" })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
+
+test("Rewind replays an incident on the scope and returns to live", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByText("Live", { exact: true })).toBeVisible({ timeout: 30_000 });
+  // The demo starts with a port scan already recorded; replay it from its strip.
+  const strip = page.getByRole("button", { name: /Port scan/ }).first();
+  await expect(strip).toBeVisible({ timeout: 30_000 });
+  await strip.click();
+  const inspector = page.getByRole("complementary", { name: "Inspector" });
+  await inspector.getByRole("button", { name: "Replay this incident" }).click();
+  const tape = page.getByRole("slider", { name: "Replay position" });
+  await expect(tape).toBeVisible();
+  await expect(page.getByText(/^REPLAY · /)).toBeVisible();
+  const before = Number(await tape.getAttribute("aria-valuenow"));
+  await expect.poll(async () => Number(await tape.getAttribute("aria-valuenow")), { timeout: 10_000 }).toBeGreaterThan(before);
+  // Scrub with the keyboard, then go back to live.
+  await page.getByRole("button", { name: "Pause the replay" }).click();
+  await tape.focus();
+  const at = Number(await tape.getAttribute("aria-valuenow"));
+  await page.keyboard.press("Shift+ArrowLeft");
+  await expect(tape).toHaveAttribute("aria-valuenow", String(Math.max(0, at - 10)));
+  await page.getByRole("button", { name: "Back to live" }).click();
+  await expect(tape).toBeHidden();
+  // R rewinds the last minute from anywhere on the scope.
+  await page.keyboard.press("r");
+  await expect(tape).toBeVisible();
+  await page.keyboard.press("l");
+  await expect(tape).toBeHidden();
+});

@@ -1,4 +1,4 @@
-import { StrictMode, useEffect, useMemo, useState, type ReactNode } from "react";
+import { StrictMode, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate } from "react-router";
 import "@fontsource-variable/hubot-sans/wdth.css";
@@ -11,6 +11,8 @@ import { Analyze } from "./pages/Analyze";
 import { Detection } from "./pages/Detection";
 import { Rules } from "./pages/Rules";
 import { Tls } from "./pages/Tls";
+import { ActionsContext, type Actions } from "./actions";
+import { alertsAt, canReplay, frameAt, incidentWindow, Scrubber, useReplayClock, type Replay } from "./replay";
 import { AlertBody, Bars, SevBadge, Strip, TrafficChart } from "./ui";
 
 /** The tool dock. Each tool opens as a console over the live scope, which keeps sweeping behind it. */
@@ -142,7 +144,28 @@ function Shell() {
   const { data: attackList } = usePoll<{ attacks: { kind: string; label: string }[] }>("/api/attacks", 0);
   const [attack, setAttack] = useState("port_scan");
   const [msg, setMsg] = useState<string | null>(null);
+  const [replay, setReplay] = useState<Replay | null>(null);
   const s = live.stats;
+  const frames = live.frames;
+  const newest = frames[frames.length - 1]?.t ?? Date.now();
+  useReplayClock(replay, newest, setReplay);
+  const rewind = useCallback(() => {
+    if (frames.length < 2) return;
+    navigate("/");
+    setReplay({ t: Math.max(frames[0].t, newest - 60_000), playing: true, speed: 4 });
+  }, [frames, newest, navigate]);
+  const replayAlert = useCallback(
+    (a: Alert) => {
+      const w = incidentWindow(a, frames);
+      navigate("/");
+      setSel({ kind: "alert", alert: a });
+      setReplay({ t: w.from, playing: true, speed: 2, alertId: a.id });
+    },
+    [frames, navigate],
+  );
+  const actions = useMemo<Actions>(() => ({ replay: replayAlert, canReplay: (a) => canReplay(a, frames) }), [replayAlert, frames]);
+  const frame = replay ? frameAt(frames, replay.t) : undefined;
+  const scopeAlerts = replay ? alertsAt(live.alerts, replay.t) : live.alerts;
   const last = s?.series.slice(-5) ?? [];
   const pps = last.length ? Math.round(last.reduce((a, x) => a + x.packets, 0) / last.length) : 0;
   const bps = last.length ? last.reduce((a, x) => a + x.bytes, 0) / last.length : 0;
@@ -156,14 +179,24 @@ function Shell() {
       if (["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName) || e.metaKey || e.ctrlKey) return;
       if (e.key === "Escape") {
         if (sheet) navigate("/");
+        else if (replay) setReplay(null);
         else setSel(null);
+      }
+      if (e.key === "r" || e.key === "R") {
+        if (replay) setReplay(null);
+        else rewind();
+      }
+      if ((e.key === "l" || e.key === "L") && replay) setReplay(null);
+      if (e.key === " " && replay && !(el.closest("button") || el.getAttribute("role") === "slider")) {
+        e.preventDefault();
+        setReplay({ ...replay, playing: !replay.playing });
       }
       const n = Number(e.key);
       if (n >= 1 && n <= TOOLS.length) navigate(TOOLS[n - 1].to);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [sheet, navigate]);
+  }, [sheet, navigate, replay, rewind]);
 
   async function launch() {
     setMsg(null);
@@ -194,8 +227,9 @@ function Shell() {
   }, [sel, live]);
 
   return (
-    <div className="relative h-dvh overflow-hidden">
-      <NetworkMap graph={s?.graph} alerts={live.alerts} selection={sel} onSelect={pick} />
+    <ActionsContext.Provider value={actions}>
+    <div className={`relative h-dvh overflow-hidden ${replay ? "replaying" : ""}`}>
+      <NetworkMap graph={replay ? frame?.graph : s?.graph} alerts={scopeAlerts} selection={sel} onSelect={pick} tape={replay ? replay.t : undefined} />
 
       {/* Vital signs */}
       <div className="panel pointer-events-auto absolute left-3 top-3 w-[min(19rem,calc(100%-1.5rem))] p-3">
@@ -228,7 +262,7 @@ function Shell() {
 
       {/* Alert feed */}
       <div className="pointer-events-none absolute left-3 top-[9.5rem] hidden w-[19rem] space-y-2 md:block">
-        {live.alerts.slice(0, 5).map((a) => (
+        {scopeAlerts.slice(0, 5).map((a) => (
           <div key={a.id} className="panel pointer-events-auto overflow-hidden !rounded-[10px]">
             <Strip a={a} compact fresh={live.isFresh(a.id)} onOpen={(x) => pick({ kind: "alert", alert: x })} route={`${ROLE[hostOf(a.src)] ?? a.src} → ${ROLE[hostOf(a.dst)] ?? a.dst}`} />
           </div>
@@ -244,6 +278,11 @@ function Shell() {
             <span className="hidden 2xl:inline">{t.t}</span>
           </NavLink>
         ))}
+        <span className="mx-0.5 my-1.5 w-px bg-line" aria-hidden />
+        <button className={`flex items-center gap-2 rounded-[13px] px-2.5 py-2 text-[13px] font-semibold ${replay ? "bg-warn text-[#1d1300]" : "text-warn hover:bg-panel-2"}`} onClick={() => (replay ? setReplay(null) : rewind())} title="Rewind the scope (R)" aria-pressed={Boolean(replay)} disabled={frames.length < 2}>
+          <Icon d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5M12 8v4l3 2" />
+          <span className="hidden xl:inline">Rewind</span>
+        </button>
       </nav>
 
       {/* Inspector */}
@@ -281,6 +320,10 @@ function Shell() {
 
       {/* Timeline and attack bar */}
       <div className="panel absolute bottom-[4.25rem] left-3 right-3 z-10 flex flex-wrap items-center gap-x-4 gap-y-2 p-2.5 md:bottom-3 md:right-[24.75rem] lg:flex-nowrap">
+        {replay ? (
+          <Scrubber frames={frames} alerts={live.alerts} replay={replay} onChange={setReplay} onExit={() => setReplay(null)} />
+        ) : (
+          <>
         <div className="min-w-0 flex-1 basis-60">
           {s ? <TrafficChart series={s.series} height={56} /> : <div className="h-14" />}
         </div>
@@ -303,6 +346,8 @@ function Shell() {
             Autopilot
           </label>
         </div>
+          </>
+        )}
         {msg && <p className="w-full text-xs text-muted" aria-live="polite">{msg}</p>}
       </div>
 
@@ -323,6 +368,7 @@ function Shell() {
         </section>
       )}
     </div>
+    </ActionsContext.Provider>
   );
 }
 

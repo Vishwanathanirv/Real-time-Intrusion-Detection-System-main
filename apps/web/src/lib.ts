@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { frameOf, type Frame } from "@packeteye/core";
+
+export type { Frame };
 
 export type Severity = "low" | "medium" | "high" | "critical";
 export type Alert = {
@@ -54,14 +57,27 @@ export function useLive() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [connected, setConnected] = useState(false);
   const fresh = useRef(new Set<string>());
+  // The flight recorder: one frame a second of the scope, for replaying an incident.
+  const [frames, setFrames] = useState<Frame[]>([]);
 
   useEffect(() => {
     let ws: WebSocket | null = null;
     let stop = false;
     let retry: ReturnType<typeof setTimeout>;
     api<{ alerts: Alert[] }>("/api/alerts?limit=30").then((r) => setAlerts(r.alerts)).catch(() => {});
+    api<{ frames: Frame[] }>("/api/history")
+      .then((r) => setFrames((now) => [...r.frames.filter((f) => !now.length || f.t < now[0].t), ...now]))
+      .catch(() => {});
     const onMessage = (m: { type: string; data: unknown }) => {
-      if (m.type === "stats") setStats(m.data as Stats);
+      if (m.type === "stats") {
+        const s = m.data as Stats;
+        setStats(s);
+        const f = frameOf(s, Date.now());
+        setFrames((prev) => {
+          const keep = prev.length && f.t - prev[0].t > 300_000 ? prev.slice(1) : prev;
+          return [...keep, f];
+        });
+      }
       if (m.type === "hello") {
         const d = m.data as { state: Stats["state"]; stats: Omit<Stats, "state"> };
         setStats({ ...d.stats, state: d.state });
@@ -107,7 +123,7 @@ export function useLive() {
       ws?.close();
     };
   }, []);
-  return { stats, alerts, connected, isFresh: (id: string) => fresh.current.has(id) };
+  return { stats, alerts, frames, connected, isFresh: (id: string) => fresh.current.has(id) };
 }
 
 export function usePoll<T>(path: string | null, ms = 5000) {

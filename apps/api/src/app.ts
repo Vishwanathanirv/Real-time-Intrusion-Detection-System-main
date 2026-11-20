@@ -105,6 +105,7 @@ export async function buildApp(opts: AppOptions = {}): Promise<{ app: FastifyIns
 
   app.get("/api/stats", async () => ({ ...live.sensor.stats(), state: live.state, avgMicrosPerPacket: +(live.sensor.avgNsPerPacket / 1000).toFixed(2), alerts: store.summary(Date.now() - 24 * 3600_000) }));
 
+  app.get("/api/history", async () => ({ frames: live.recorder.frames }));
   app.get("/api/alerts", async (req) => {
     const q = z.object({ status: z.enum(["open", "acknowledged", "resolved"]).optional(), severity: z.enum(["low", "medium", "high", "critical"]).optional(), type: z.string().max(32).optional(), limit: z.coerce.number().int().min(1).max(500).default(100) }).parse(req.query);
     return { alerts: store.list(q) };

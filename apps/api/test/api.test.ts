@@ -26,6 +26,12 @@ describe("API", () => {
     expect((await app.inject("/api/config")).json().config.portScan.distinctPorts).toBeGreaterThan(0);
   });
 
+  it("serves the flight recorder's frames for incident replay", async () => {
+    live.recorder.record({ t: 1000, packets: 5, bytes: 500, graph: { nodes: [{ ip: "10.0.0.5", bytes: 500, internal: true }, { ip: "10.0.0.10", bytes: 500, internal: true }], edges: [{ src: "10.0.0.5", dst: "10.0.0.10", bytes: 500, packets: 5, ports: [443] }] } });
+    const frames = (await app.inject("/api/history")).json().frames;
+    expect(frames.at(-1)).toMatchObject({ packets: 5, graph: { edges: [{ src: "10.0.0.5" }] } });
+  });
+
   it("analyses an uploaded pcap and finds the attack in it", async () => {
     const sim = new NetworkSimulator(5);
     const t = Date.UTC(2026, 0, 1, 12);

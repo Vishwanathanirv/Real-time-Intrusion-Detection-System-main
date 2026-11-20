@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { useActions } from "./actions";
 import { ago, api, clock, type Alert, type Severity } from "./lib";
 
 /** Lamp colour per severity: the LEDs on the front of the box. */
@@ -145,6 +146,7 @@ export function AlertBody({ alert, onChange }: { alert: Alert; onChange?: (a: Al
   const [a, setA] = useState(alert);
   const [note, setNote] = useState(alert.note ?? "");
   const [err, setErr] = useState<string | null>(null);
+  const actions = useActions();
   useEffect(() => {
     setA(alert);
     setNote(alert.note ?? "");
@@ -165,6 +167,17 @@ export function AlertBody({ alert, onChange }: { alert: Alert; onChange?: (a: Al
       <SevBadge s={a.severity} />
       <h2 className="mt-2 text-lg font-semibold leading-snug">{a.title}</h2>
       <p className="mt-1.5 text-sm leading-relaxed text-muted">{a.description}</p>
+
+      {actions.replay && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button className="btn btn-warn h-8" onClick={() => actions.replay!(a)} disabled={!actions.canReplay?.(a)} title={actions.canReplay?.(a) ? "Play this incident back on the scope" : "Older than the five minutes the recorder keeps"}>
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5" />
+            </svg>
+            Replay this incident
+          </button>
+        </div>
+      )}
 
       <a className="screen mt-4 block px-3 py-2.5 text-sm hover:underline" href={/^T\d/.test(a.mitre.id) ? `https://attack.mitre.org/techniques/${a.mitre.id.replace(".", "/")}/` : undefined} target="_blank" rel="noreferrer">
         <span className="silk block">MITRE ATT&amp;CK, {a.mitre.tactic}</span>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent, type WheelEvent as RWheelEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent, type WheelEvent as RWheelEvent } from "react";
 import { bytes, type Alert, type Stats } from "./lib";
 
 /** Names for the simulated office's servers. Real captures just show addresses. */
@@ -69,7 +69,7 @@ const internalIp = (ip: string) => /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)
 
 export type Selection = { kind: "host"; ip: string } | { kind: "alert"; alert: Alert } | null;
 
-export function NetworkMap({ graph, alerts, selection, onSelect }: { graph: Graph | undefined; alerts: Alert[]; selection: Selection; onSelect: (s: Selection) => void }) {
+export function NetworkMap({ graph, alerts, selection, onSelect, tape }: { graph: Graph | undefined; alerts: Alert[]; selection: Selection; onSelect: (s: Selection) => void; tape?: number }) {
   const svg = useRef<SVGSVGElement>(null);
   const [view, setView] = useState({ x: 0, y: 0, k: 0.82 });
   const [hover, setHover] = useState<string | null>(null);
@@ -179,7 +179,7 @@ export function NetworkMap({ graph, alerts, selection, onSelect }: { graph: Grap
   };
 
   return (
-    <div className="dots absolute inset-0">
+    <div className="dots absolute inset-0" style={tape !== undefined ? ({ "--accent": "var(--warn)" } as CSSProperties) : undefined}>
       <svg
         ref={svg}
         className="h-full w-full touch-none select-none"
@@ -230,6 +230,11 @@ export function NetworkMap({ graph, alerts, selection, onSelect }: { graph: Grap
             ))}
             <line x1={0} y1={0} x2={SCOPE} y2={0} stroke="var(--accent)" strokeOpacity={0.55} strokeWidth={1.5} />
           </g>
+          {tape !== undefined && (
+            <text y={SCOPE + 48} textAnchor="middle" fontSize={15} letterSpacing="0.3em" fontWeight={700} className="lcd" fill="var(--warn)">
+              REPLAY · {new Date(tape).toLocaleTimeString("en-IN", { hour12: false })}
+            </text>
+          )}
           {[
             [CORE, "CORE · servers"],
             [OFFICE, "OFFICE · workstations"],

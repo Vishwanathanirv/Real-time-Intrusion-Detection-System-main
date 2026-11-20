@@ -5,6 +5,8 @@ import {
   compileRules,
   tlsInventory,
   DEFAULT_CONFIG,
+  FlightRecorder,
+  frameOf,
   NetworkSimulator,
   PcapStreamReader,
   Sensor,
@@ -39,6 +41,7 @@ class DemoSensor {
   private dirty = new Map<string, Alert>();
   private listeners = new Set<Listener>();
   private nextAuto = Date.now() + 25_000;
+  readonly recorder = new FlightRecorder();
   state: State = { mode: "simulator", running: true, autopilot: true, activeAttacks: [] };
   readonly ready: Promise<void>;
 
@@ -62,9 +65,10 @@ class DemoSensor {
       if (p.ts > now) this.queue.push(p);
       else {
         this.sensor.ingest(p);
-        if (p.ts - tick >= 1000) {
-          this.sensor.tick(p.ts);
-          tick = p.ts;
+        while (p.ts - tick >= 1000) {
+          tick += 1000;
+          this.sensor.tick(tick);
+          this.recorder.record(frameOf(this.sensor.stats(tick), tick));
         }
       }
     }
@@ -102,7 +106,9 @@ class DemoSensor {
       this.state.activeAttacks = this.state.activeAttacks.filter((a) => a.endsAt > now);
       for (const a of this.dirty.values()) this.emit({ type: "alert-update", data: a });
       this.dirty.clear();
-      this.emit({ type: "stats", data: this.stats(now) });
+      const stats = this.stats(now);
+      this.recorder.record(frameOf(stats, now));
+      this.emit({ type: "stats", data: stats });
     }, 1000);
   }
 
@@ -151,6 +157,7 @@ class DemoSensor {
     const q = Object.fromEntries(u.searchParams);
     if (method === "GET" && p === "/api/health") return ok({ ok: true, mode: "simulator", running: this.state.running, notifications: false, browser: true });
     if (method === "GET" && p === "/api/stats") return ok(this.stats());
+    if (method === "GET" && p === "/api/history") return ok({ frames: this.recorder.frames });
     if (method === "GET" && p === "/api/alerts") {
       const limit = Math.min(Number(q.limit ?? 100) || 100, 500);
       const list = [...this.alerts.values()]

@@ -146,6 +146,30 @@ body {
     border-color: var(--accent);
     color: var(--accent-ink);
   }
+  .btn-warn {
+    border-color: color-mix(in oklab, var(--warn) 55%, var(--line));
+    color: var(--warn);
+    background: color-mix(in oklab, var(--warn) 10%, var(--panel-solid));
+  }
+  .btn-warn:hover:not(:disabled) {
+    border-color: var(--warn);
+  }
+  /* Rewind: the scope plays back like tape, so it turns amber. */
+  .tape-badge {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    color: #1d1300;
+    background: var(--warn);
+    border-radius: 4px;
+    padding: 0.2rem 0.4rem;
+  }
+  .tape {
+    border-radius: 8px;
+    background: color-mix(in oklab, var(--warn) 5%, transparent);
+    outline-offset: 2px;
+  }
   .field {
     height: 2.25rem;
     width: 100%;
