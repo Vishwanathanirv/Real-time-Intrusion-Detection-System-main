@@ -35,11 +35,15 @@ export function safeEqual(a: string, b: string): boolean {
  * pick its own address and walk straight past the per-IP rate limits.
  * TRUST_PROXY=1 (or a hop count / address list) turns it on.
  */
-function trustProxy(): boolean | number | string {
+function trustProxy(): boolean | string | ((addr: string, hop: number) => boolean) {
   const v = process.env.TRUST_PROXY?.trim();
   if (!v || v === "0" || v === "false") return false;
   if (v === "true") return true;
-  return /^\d+$/.test(v) ? Number(v) : v;
+  if (/^\d+$/.test(v)) {
+    const hops = Number(v);
+    return (_addr, hop) => hop < hops;
+  }
+  return v;
 }
 
 export async function buildApp(opts: AppOptions = {}): Promise<{ app: FastifyInstance; live: LiveSensor; store: AlertStore }> {
