@@ -5,5 +5,7 @@ services:
     plan: free
     healthCheckPath: /api/health
     envVars:
+      - key: TRUST_PROXY
+        value: "1"
       - key: ADMIN_TOKEN
         generateValue: true

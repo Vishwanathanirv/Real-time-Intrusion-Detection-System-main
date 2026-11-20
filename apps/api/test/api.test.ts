@@ -122,3 +122,27 @@ describe("rules and TLS fingerprints", () => {
     expect(chromium.hosts).toBeGreaterThan(3);
   });
 });
+
+describe("request hardening", () => {
+  it("compares the admin token in constant time without accepting prefixes", async () => {
+    const { safeEqual } = await import("../src/app");
+    expect(safeEqual("Bearer t0ken", "Bearer t0ken")).toBe(true);
+    expect(safeEqual("Bearer t0ke", "Bearer t0ken")).toBe(false);
+    expect(safeEqual("", "Bearer t0ken")).toBe(false);
+    const r = await app.inject({ method: "PUT", url: "/api/live", payload: { autopilot: false }, headers: { authorization: "Bearer t0kenX" } });
+    expect(r.statusCode).toBe(401);
+  });
+
+  it("ignores X-Forwarded-For unless TRUST_PROXY is set", async () => {
+    const r = await app.inject({ url: "/api/health", headers: { "x-forwarded-for": "6.6.6.6" }, remoteAddress: "10.1.1.1" });
+    expect(r.statusCode).toBe(200);
+    const { app: a2 } = await buildApp({ dbFile: ":memory:", start: false, notifier: new TelegramNotifier("", "") });
+    let seen = "";
+    a2.addHook("onRequest", async (req) => {
+      seen = req.ip;
+    });
+    await a2.inject({ url: "/api/health", headers: { "x-forwarded-for": "6.6.6.6" }, remoteAddress: "10.1.1.1" });
+    expect(seen).toBe("10.1.1.1");
+    await a2.close();
+  });
+});

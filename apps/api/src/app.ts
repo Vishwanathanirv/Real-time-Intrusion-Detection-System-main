@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -22,6 +23,25 @@ function loadEvaluation() {
   return p ? JSON.parse(readFileSync(p, "utf8")) : null;
 }
 
+/** Constant-time string comparison, so the admin token cannot be guessed byte by byte from response timing. */
+export function safeEqual(a: string, b: string): boolean {
+  const x = createHash("sha256").update(a).digest();
+  const y = createHash("sha256").update(b).digest();
+  return timingSafeEqual(x, y);
+}
+
+/**
+ * Only trust X-Forwarded-For behind a real reverse proxy. Trusting it everywhere lets any client
+ * pick its own address and walk straight past the per-IP rate limits.
+ * TRUST_PROXY=1 (or a hop count / address list) turns it on.
+ */
+function trustProxy(): boolean | number | string {
+  const v = process.env.TRUST_PROXY?.trim();
+  if (!v || v === "0" || v === "false") return false;
+  if (v === "true") return true;
+  return /^\d+$/.test(v) ? Number(v) : v;
+}
+
 export async function buildApp(opts: AppOptions = {}): Promise<{ app: FastifyInstance; live: LiveSensor; store: AlertStore }> {
   const config: DetectorConfig = structuredClone(DEFAULT_CONFIG);
   const store = new AlertStore(opts.dbFile);
@@ -31,7 +51,7 @@ export async function buildApp(opts: AppOptions = {}): Promise<{ app: FastifyIns
   const evaluation = loadEvaluation();
   const baseline = trainBaseline({ seed: 99, minutes: 8 });
 
-  const app = Fastify({ logger: opts.logger ?? false, trustProxy: true, bodyLimit: 1024 * 1024 });
+  const app = Fastify({ logger: opts.logger ?? false, trustProxy: trustProxy(), bodyLimit: 1024 * 1024 });
   await app.register(helmet, { contentSecurityPolicy: { directives: { defaultSrc: ["'self'"], styleSrc: ["'self'", "'unsafe-inline'"], imgSrc: ["'self'", "data:"], connectSrc: ["'self'", "ws:", "wss:"] } } });
   await app.register(rateLimit, { max: 600, timeWindow: "1 minute" });
   await app.register(multipart, { limits: { fileSize: 50 * 1024 * 1024, files: 1 } });
@@ -45,7 +65,7 @@ export async function buildApp(opts: AppOptions = {}): Promise<{ app: FastifyIns
   });
 
   const requireAdmin = (h: string | undefined) => {
-    if (adminToken && h !== `Bearer ${adminToken}`) throw Object.assign(new Error("Admin token required"), { statusCode: 401 });
+    if (adminToken && !safeEqual(h ?? "", `Bearer ${adminToken}`)) throw Object.assign(new Error("Admin token required"), { statusCode: 401 });
   };
 
   // Live alerts: persist, notify, broadcast.
