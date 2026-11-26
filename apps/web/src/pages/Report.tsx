@@ -2,15 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { PLAIN } from "../actions";
 import { clock } from "../lib";
-import { hostOf, isServer, lockOn, place, ROLE } from "../map";
+import { ColumnHeads, hostOf, internalIp, link, place, remember, ROLE, VIEWBOX } from "../map";
 import { decodeReport, type Report as R } from "../report-codec";
 import { NEXT_STEPS } from "../ui";
 
 const name = (addr: string) => ROLE[hostOf(addr)] ?? addr;
 const dur = (ms: number) => (ms < 60_000 ? `${(ms / 1000).toFixed(1)} s` : `${Math.floor(ms / 60_000)} min ${Math.round((ms % 60_000) / 1000)} s`);
 
-/** The incident on a small scope, playable frame by frame like the Rewind tape. */
-function MiniScope({ report }: { report: R }) {
+/** The incident on the network map, playable frame by frame. */
+function MiniMap({ report }: { report: R }) {
   const { alert, frames } = report;
   const [i, setI] = useState(0);
   const [playing, setPlaying] = useState(true);
@@ -19,55 +19,45 @@ function MiniScope({ report }: { report: R }) {
     const id = setInterval(() => setI((x) => (x + 1) % frames.length), 450);
     return () => clearInterval(id);
   }, [playing, frames.length]);
+  const hot = new Set([hostOf(alert.src), hostOf(alert.dst)]);
   const seen = useMemo(() => {
     const all = new Map<string, boolean>();
     for (const f of frames) for (const n of f.graph.nodes) all.set(n.ip, n.internal);
-    const ipNum = (ip: string) => ip.split(".").reduce((n, o) => n * 256 + Number(o), 0);
-    const ips = [...all.entries()].map(([ip, internal]) => ({ ip, internal }));
-    return {
-      servers: ips
-        .filter(isServer)
-        .map((n) => n.ip)
-        .sort((a, b) => ipNum(a) - ipNum(b)),
-      workstations: ips
-        .filter((n) => n.internal && !isServer(n))
-        .map((n) => n.ip)
-        .sort((a, b) => ipNum(a) - ipNum(b)),
-    };
+    for (const ip of hot) if (!all.has(ip)) all.set(ip, internalIp(ip));
+    const s = { servers: [] as string[], workstations: [] as string[], internet: [] as string[] };
+    remember(
+      s,
+      [...all.entries()].map(([ip, internal]) => ({ ip, internal })),
+    );
+    return s;
   }, [frames]);
   const f = frames[i];
-  const hot = new Set([hostOf(alert.src), hostOf(alert.dst)]);
   const raised = f ? f.t >= alert.firstSeen : false;
   const pos = new Map((f?.graph.nodes ?? []).map((n) => [n.ip, { ...n, ...place(n, seen) }]));
   for (const ip of hot)
     if (!pos.has(ip)) {
-      const n = { ip, bytes: 0, internal: /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(ip) };
+      const n = { ip, bytes: 0, internal: internalIp(ip) };
       pos.set(ip, { ...n, ...place(n, seen) });
     }
   return (
-    <figure className="report-scope">
-      <svg viewBox="-600 -600 1200 1200" className="block w-full" role="img" aria-label={`The incident on the scope, frame ${i + 1} of ${frames.length}`}>
-        <circle r={560} fill="color-mix(in oklab, var(--accent) 5%, transparent)" stroke="var(--line)" />
-        {[120, 310, 500].map((r) => (
-          <circle key={r} r={r} fill="none" stroke="var(--faint)" strokeOpacity={0.4} strokeWidth={1.5} />
-        ))}
-        <line x1={-560} x2={560} y1={0} y2={0} stroke="var(--line)" strokeDasharray="1 8" />
-        <line y1={-560} y2={560} x1={0} x2={0} stroke="var(--line)" strokeDasharray="1 8" />
+    <figure className="panel p-3">
+      <svg viewBox={VIEWBOX} className="block w-full" role="img" aria-label={`The incident on the network map, frame ${i + 1} of ${frames.length}`}>
+        <ColumnHeads />
         {f?.graph.edges.map((e) => {
           const a = pos.get(e.src);
           const b = pos.get(e.dst);
           if (!a || !b) return null;
           const bad = raised && hot.has(e.src) && hot.has(e.dst);
-          return <line key={`${e.src}>${e.dst}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={bad ? "var(--bad)" : "var(--accent)"} strokeOpacity={bad ? 0.9 : 0.3} strokeWidth={bad ? 4 : 2} />;
+          return <path key={`${e.src}>${e.dst}`} d={link(a, b)} fill="none" stroke={bad ? "var(--bad)" : "var(--accent)"} strokeOpacity={bad ? 0.9 : 0.25} strokeWidth={bad ? 3.5 : 1.5} />;
         })}
         {[...pos.values()].map((n) => {
           const isHot = hot.has(n.ip);
           return (
             <g key={n.ip} transform={`translate(${n.x} ${n.y})`}>
-              {isHot && <path d={lockOn(26)} fill="none" stroke={raised ? "var(--bad)" : "var(--accent)"} strokeWidth={4} />}
-              <circle r={isHot ? 13 : 9} fill={isHot && raised ? "var(--bad)" : n.internal ? "var(--node)" : "var(--node-ext)"} />
+              {isHot && <circle r={18} fill="none" stroke={raised ? "var(--bad)" : "var(--accent)"} strokeWidth={2.5} />}
+              <circle r={isHot ? 11 : 7} fill={isHot && raised ? "var(--bad)" : n.internal ? "var(--node)" : "var(--node-ext)"} />
               {(isHot || ROLE[n.ip]) && (
-                <text y={isHot ? 46 : 32} textAnchor="middle" fontSize={isHot ? 26 : 20} fontWeight={600} fill="var(--ink)" paintOrder="stroke" stroke="var(--bg)" strokeWidth={6}>
+                <text y={isHot ? 34 : 24} textAnchor="middle" fontSize={isHot ? 15 : 12} fontWeight={600} fill="var(--ink)" paintOrder="stroke" stroke="var(--surface)" strokeWidth={4}>
                   {ROLE[n.ip] ?? n.ip}
                 </text>
               )}
@@ -95,7 +85,7 @@ function MiniScope({ report }: { report: R }) {
         />
         <span className="lcd w-20 text-right text-xs text-muted">{f ? clock(f.t) : "–"}</span>
       </figcaption>
-      {!frames.length && <p className="mt-2 text-xs text-faint">The scope was not recording when this alert was raised, so the report has no frames.</p>}
+      {!frames.length && <p className="mt-2 text-xs text-faint">The sensor was not recording when this alert was raised, so the report has no frames.</p>}
     </figure>
   );
 }
@@ -117,7 +107,7 @@ export function Report() {
     window.addEventListener("hashchange", load);
     return () => {
       window.removeEventListener("hashchange", load);
-      document.title = "PacketEye · Sonar for your network";
+      document.title = "PacketEye · Network intrusion detection";
     };
   }, []);
   const r = state.report;
@@ -145,7 +135,7 @@ export function Report() {
               Save as PDF
             </button>
             <Link to="/" className="btn btn-accent h-8">
-              Open the live scope
+              Open PacketEye
             </Link>
           </span>
         </header>
@@ -166,9 +156,11 @@ export function Report() {
         {r && a && (
           <article className="rise">
             <section className="report-head" style={{ ["--c" as string]: a.severity === "medium" ? "var(--warn)" : a.severity === "low" ? "var(--faint)" : "var(--bad)" }}>
-              <div className="report-callsign lcd">{a.mitre.id}</div>
               <div className="min-w-0">
-                <div className="report-stamp">{a.severity}</div>
+                <div className="flex items-center gap-3">
+                  <span className="report-sev">{a.severity}</span>
+                  <span className="lcd text-sm text-muted">{a.mitre.id}</span>
+                </div>
                 <h1 className="display mt-2 text-[clamp(1.5rem,4vw,2.4rem)] font-bold leading-[1.05]">{a.title}</h1>
                 <p className="lcd mt-2 text-sm text-muted">
                   {name(a.src)} <span className="text-faint">→</span> {name(a.dst)}
@@ -192,8 +184,8 @@ export function Report() {
               ))}
             </dl>
 
-            <div className="mt-8 grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-              <MiniScope report={r} />
+            <div className="mt-8 grid gap-8">
+              <MiniMap report={r} />
               <div className="space-y-7">
                 <section>
                   <h2 className="label">What happened</h2>

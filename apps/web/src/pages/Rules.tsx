@@ -43,7 +43,7 @@ export function Rules() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="display pr-12 text-[1.6rem] font-bold leading-tight">Detection rules</h1>
+        <h1 className="display text-[1.6rem] font-bold leading-tight">Detection rules</h1>
         <p className="mt-2 max-w-3xl text-[0.95rem] text-muted">
           Signatures in Suricata syntax run beside the behavioural detectors, so a SOC can add its own detections in a language it already knows. Match on addresses, ports and TCP flags, and on DNS names, TLS server names and JA4 fingerprints with{" "}
           <code className="font-mono text-xs">dns.query</code>, <code className="font-mono text-xs">tls.sni</code> and <code className="font-mono text-xs">ja4.hash</code>. Thresholds work the same way as in Suricata.
