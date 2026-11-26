@@ -2,19 +2,19 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Plain, PLAIN, useActions } from "./actions";
 import { ago, api, clock, type Alert, type Severity } from "./lib";
 
-/** Lamp colour per severity: the LEDs on the front of the box. */
+/** Colour per severity. */
 const LAMP: Record<Severity, string> = { low: "var(--faint)", medium: "var(--warn)", high: "var(--bad)", critical: "var(--bad)" };
 
 export function SevBadge({ s }: { s: Severity }) {
   return (
     <span className="inline-flex items-center gap-2 text-[13px] font-semibold capitalize" style={{ color: s === "low" ? "var(--muted)" : s === "medium" ? "var(--warn)" : "var(--bad)" }}>
-      <span className={`led ${s === "critical" ? "blink" : ""}`} style={{ ["--c" as string]: LAMP[s] }} aria-hidden />
+      <span className="led" style={{ ["--c" as string]: LAMP[s] }} aria-hidden />
       {s}
     </span>
   );
 }
 
-/** An instrument readout: a figure under a tick scale, like a dial on the scope console. */
+/** A labelled figure. */
 export function Kpi({ label, value, sub, tone }: { label: string; value: ReactNode; sub?: ReactNode; tone?: string }) {
   return (
     <div className="readout">
@@ -41,7 +41,7 @@ export function Panel({ title, action, children, className = "" }: { title?: Rea
   );
 }
 
-/** Packets per second over the last two minutes, with a coral tick where an alert fired. */
+/** Packets per second over the last two minutes, with a red tick where an alert fired. */
 export function TrafficChart({ series, height = 160, onPick }: { series: { t: number; packets: number; alerts: number }[]; height?: number; onPick?: (t: number) => void }) {
   const W = 600;
   const H = 140;
@@ -54,7 +54,7 @@ export function TrafficChart({ series, height = 160, onPick }: { series: { t: nu
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="block w-full" style={{ height }} role="img" aria-label="Packets per second, last two minutes">
         <defs>
           <linearGradient id="tc-fill" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0" stopColor="var(--accent)" stopOpacity="0.3" />
+            <stop offset="0" stopColor="var(--accent)" stopOpacity="0.18" />
             <stop offset="1" stopColor="var(--accent)" stopOpacity="0" />
           </linearGradient>
         </defs>
@@ -68,7 +68,7 @@ export function TrafficChart({ series, height = 160, onPick }: { series: { t: nu
             </rect>
           ))}
       </svg>
-      <span className="lcd pointer-events-none absolute left-2 top-1 text-[10px] text-faint">{Math.round(max).toLocaleString()} pkt/s</span>
+      <span className="lcd pointer-events-none absolute left-2 top-1 text-[11px] text-faint">{Math.round(max).toLocaleString()} pkt/s</span>
     </div>
   );
 }
@@ -90,32 +90,29 @@ export function Bars({ rows }: { rows: { label: ReactNode; value: number; hint?:
   );
 }
 
-/**
- * An alert as an air-traffic flight strip: a severity bar, the ATT&CK technique as its callsign,
- * the route it is flying, and its count and age in their own boxes on the right.
- */
+/** One alert as a row: severity and technique, title and route, count and age. */
 export function Strip({ a, fresh, onOpen, absolute, route, compact }: { a: Alert; fresh?: boolean; onOpen: (a: Alert) => void; absolute?: boolean; route?: string; compact?: boolean }) {
   const handled = (a.status ?? "open") !== "open";
   return (
     <button
       onClick={() => onOpen(a)}
-      className={`strip ${fresh ? "row-new" : ""} ${handled ? "strip-handled" : ""}`}
+      className={`alert-row ${fresh ? "row-new" : ""} ${handled ? "is-handled" : ""}`}
       style={{ ["--c" as string]: LAMP[a.severity] }}
       aria-label={`${a.severity} alert: ${a.title}, ${a.mitre.id}${a.count > 1 ? `, ${a.count} times` : ""}${handled ? `, ${a.status}` : ""}`}
     >
-      <span className="strip-call">
-        <span className="lcd whitespace-nowrap text-[10.5px] font-semibold">{a.mitre.id}</span>
-        <span className={`text-[10.5px] font-semibold uppercase tracking-wider ${a.severity === "critical" ? "blink" : ""}`} style={{ color: a.severity === "low" ? "var(--muted)" : "var(--c)" }}>
+      <span className="flex flex-col gap-0.5">
+        <span className="text-[11.5px] font-semibold capitalize" style={{ color: a.severity === "low" ? "var(--muted)" : "var(--c)" }}>
           {a.severity}
         </span>
+        <span className="lcd whitespace-nowrap text-[11px] text-faint">{a.mitre.id}</span>
       </span>
-      <span className="strip-body">
+      <span className="min-w-0">
         <span className={`block font-medium ${compact ? "line-clamp-2 text-[13px] leading-snug" : "truncate text-sm"}`}>{a.title}</span>
-        <span className="lcd mt-0.5 block truncate text-[10.5px] text-faint">{route ?? `${a.src} → ${a.dst}`}</span>
+        <span className="lcd mt-0.5 block truncate text-[11px] text-faint">{route ?? `${a.src} → ${a.dst}`}</span>
       </span>
-      <span className="strip-box">
-        <span className="lcd text-[12px] font-medium">{a.count > 1 ? `×${a.count}` : "×1"}</span>
-        <span className="text-[10px] text-faint">{absolute ? clock(a.firstSeen) : ago(a.lastSeen)}</span>
+      <span className="flex flex-col items-end gap-0.5">
+        <span className="lcd text-[12px]">{a.count > 1 ? `×${a.count}` : "×1"}</span>
+        <span className="text-[11px] text-faint">{absolute ? clock(a.firstSeen) : ago(a.lastSeen)}</span>
       </span>
     </button>
   );
@@ -184,13 +181,13 @@ export function AlertBody({ alert, onChange }: { alert: Alert; onChange?: (a: Al
       {PLAIN[a.type] && (
         <Plain className="mt-3">
           <strong className="font-semibold">In plain words: </strong>
-          {PLAIN[a.type].what} <em className="not-italic text-muted">Why it matters: {PLAIN[a.type].why}</em>
+          {PLAIN[a.type].what} <span className="text-muted">Why it matters: {PLAIN[a.type].why}</span>
         </Plain>
       )}
 
       {actions.replay && (
         <div className="mt-3 flex flex-wrap gap-2">
-          <button className="btn btn-warn h-8" onClick={() => actions.replay!(a)} disabled={!actions.canReplay?.(a)} title={actions.canReplay?.(a) ? "Play this incident back on the scope" : "Older than the five minutes the recorder keeps"}>
+          <button className="btn btn-warn h-8" onClick={() => actions.replay!(a)} disabled={!actions.canReplay?.(a)} title={actions.canReplay?.(a) ? "Play this incident back on the map" : "Older than the five minutes the recorder keeps"}>
             <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5" />
             </svg>
@@ -290,7 +287,7 @@ export function AlertDrawer({ alert, onClose, onChange }: { alert: Alert; onClos
   return (
     <div className="fixed inset-0 z-50 flex justify-end p-2" role="dialog" aria-modal="true" aria-label={alert.title}>
       <button className="absolute inset-0 bg-black/40" aria-label="Close" onClick={onClose} />
-      <aside className="panel rise scroll-y relative h-full w-full max-w-md !bg-panel-solid p-5">
+      <aside className="panel rise scroll-y relative h-full w-full max-w-md p-5">
         <button className="btn absolute right-3 top-3 h-8 px-2.5" onClick={onClose} aria-label="Close panel">
           ✕
         </button>

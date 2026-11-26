@@ -57,7 +57,7 @@ export function useLive() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [connected, setConnected] = useState(false);
   const fresh = useRef(new Set<string>());
-  // The flight recorder: one frame a second of the scope, for replaying an incident.
+  // The recorder: one frame a second of the network, for replaying an incident.
   const [frames, setFrames] = useState<Frame[]>([]);
 
   useEffect(() => {

@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 export type Command = { id: string; group: string; label: string; keys?: string; run: () => void };
 
 /**
- * The command console: every action in PacketEye, by name. Ctrl+K, ⌘K or / opens it; type to
+ * The command menu: every action in PacketEye, by name. Ctrl+K, ⌘K or / opens it; type to
  * filter, arrows to move, Enter to run.
  */
 export function Palette({ commands, onClose }: { commands: Command[]; onClose: () => void }) {
@@ -28,7 +28,7 @@ export function Palette({ commands, onClose }: { commands: Command[]; onClose: (
   let group = "";
   return (
     <div className="palette-wrap" onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="palette" role="dialog" aria-modal="true" aria-label="Command console">
+      <div className="palette" role="dialog" aria-modal="true" aria-label="Command menu">
         <div className="palette-input">
           <span className="lcd text-accent" aria-hidden>
             ▸

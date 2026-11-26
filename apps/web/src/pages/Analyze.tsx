@@ -69,9 +69,9 @@ export function Analyze() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="display pr-12 text-[1.6rem] font-bold leading-tight">Analyse a capture</h1>
+        <h1 className="display text-[1.6rem] font-bold leading-tight">Analyse a capture</h1>
         <p className="mt-2 max-w-2xl text-[0.95rem] text-muted">Upload a .pcap from Wireshark or tcpdump (up to 50 MB). {DEMO ? "It is analysed right here in your browser by the same detectors; the file never leaves your machine." : "It runs through the same detectors in an isolated sensor and nothing is stored."}</p>
-        <Plain className="mt-3 max-w-2xl">A pcap is a recording of network traffic, like a tape of everything that crossed the wire. Drop one in and PacketEye replays it through its detectors.</Plain>
+        <Plain className="mt-3 max-w-2xl">A pcap is a recording of network traffic, a file of everything that crossed the wire. Drop one in and PacketEye replays it through its detectors.</Plain>
       </div>
       <label
         onDragOver={(e) => {
@@ -111,7 +111,7 @@ export function Analyze() {
           <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr]">
             <Panel title="Findings">
               {result.alerts.length ? (
-                <ul className="strip-board">
+                <ul className="alert-list">
                   {result.alerts.map((a) => (
                     <AlertRow key={a.id} a={a} onOpen={setOpen} absolute />
                   ))}

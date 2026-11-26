@@ -3,15 +3,15 @@ import { frameAt } from "@packeteye/core";
 import { clock, type Alert, type Frame } from "./lib";
 
 /**
- * Rewind: the scope as it was at any moment in the last five minutes. The flight recorder keeps one
+ * Rewind: the network as it was at any moment in the last five minutes. The recorder keeps one
  * frame a second (who was talking to whom, and how much), and alerts carry their own first and last
- * seen times, so the scope can be redrawn for any second and played forward like a tape.
+ * seen times, so the map can be redrawn for any second and played forward.
  */
 export type Replay = { t: number; playing: boolean; speed: number; alertId?: string };
 
 export const SPEEDS = [1, 4, 16];
 
-/** The scope's alerts as they stood at time `t`: only those already raised, all still open. */
+/** The alerts as they stood at time `t`: only those already raised, all still open. */
 export function alertsAt(alerts: Alert[], t: number): Alert[] {
   return alerts
     .filter((a) => a.firstSeen <= t)
@@ -53,7 +53,7 @@ export function useReplayClock(replay: Replay | null, end: number, set: (r: Repl
   }, [playing, end, set]);
 }
 
-/** The tape: traffic over the recorded window, a coral tick per alert, and a draggable playhead. */
+/** The recorded window: traffic, a red tick per alert, and a draggable playhead. */
 export function Scrubber({ frames, alerts, replay, onChange, onExit }: { frames: readonly Frame[]; alerts: Alert[]; replay: Replay; onChange: (r: Replay) => void; onExit: () => void }) {
   const track = useRef<SVGSVGElement>(null);
   const start = frames[0]?.t ?? replay.t;

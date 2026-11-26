@@ -2,7 +2,7 @@ import type { Alert, Frame } from "./lib";
 
 /**
  * A shareable incident report lives entirely in its link: the alert, its evidence and a few dozen
- * frames of the scope around it, compressed into the URL fragment. The fragment never reaches a
+ * frames of the network around it, compressed into the URL fragment. The fragment never reaches a
  * server, so sharing a report uploads nothing.
  */
 export type Report = { v: 1; createdAt: number; alert: Alert; frames: Frame[] };
