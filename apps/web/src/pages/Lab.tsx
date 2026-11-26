@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { ATTACK_LABELS, ATTACKS, DEFAULT_CONFIG, KNOBS, type AttackKind, type WhatIfResult } from "@packeteye/core";
 import { api } from "../lib";
 
-const CALLSIGN: Record<AttackKind, string> = { port_scan: "T1046", host_sweep: "T1018", syn_flood: "T1498", brute_force: "T1110", dns_tunnel: "T1071.4", beaconing: "T1071.1", exfiltration: "TA0010", tls_c2: "T1573" };
+const TECHNIQUE: Record<AttackKind, string> = { port_scan: "T1046", host_sweep: "T1018", syn_flood: "T1498", brute_force: "T1110", dns_tunnel: "T1071.4", beaconing: "T1071.1", exfiltration: "TA0010", tls_c2: "T1573" };
 
 const secs = (ms: number) => (ms < 1000 ? `${(ms / 1000).toFixed(2)} s` : ms < 60_000 ? `${(ms / 1000).toFixed(1)} s` : `${Math.floor(ms / 60_000)} min ${Math.round((ms % 60_000) / 1000)} s`);
 
@@ -91,7 +91,7 @@ export function Lab({ live }: { live: boolean }) {
   async function runLive() {
     try {
       await api("/api/attacks", { method: "POST", json: { kind, stretch } });
-      setLaunched(`${ATTACK_LABELS[kind]} launched on the live scope${stretch > 1 ? `, ${stretch}× slower` : ""}. Close the lab to watch it.`);
+      setLaunched(`${ATTACK_LABELS[kind]} launched on the live network${stretch > 1 ? `, ${stretch}× slower` : ""}. Open the overview to watch it.`);
     } catch (e) {
       setLaunched((e as Error).message);
     }
@@ -100,7 +100,7 @@ export function Lab({ live }: { live: boolean }) {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="display pr-12 text-[1.6rem] font-bold leading-tight">What-if lab</h1>
+        <h1 className="display text-[1.6rem] font-bold leading-tight">What-if lab</h1>
         <p className="mt-2 max-w-2xl text-[0.95rem] text-muted">
           Would PacketEye still catch it if the attacker were patient, or if you tuned a detector? Pick an attack, slow it down, move the threshold. Each change replays the attack through a separate copy of the sensor, then runs the same
           clean traffic again to count false alarms.
@@ -113,7 +113,7 @@ export function Lab({ live }: { live: boolean }) {
       <div role="radiogroup" aria-label="Attack" className="flex flex-wrap gap-1.5">
         {ATTACKS.map((k) => (
           <button key={k} role="radio" aria-checked={k === kind} onClick={() => pick(k)} className={`chip ${k === kind ? "chip-on" : ""}`}>
-            <span className="lcd text-[10px] opacity-70">{CALLSIGN[k]}</span>
+            <span className="lcd text-[11px] opacity-70">{TECHNIQUE[k]}</span>
             {ATTACK_LABELS[k]}
           </button>
         ))}
@@ -145,7 +145,7 @@ export function Lab({ live }: { live: boolean }) {
           </label>
           <div className="space-y-2 border-t border-line pt-4">
             <button className="btn btn-accent w-full justify-center" onClick={runLive} disabled={!live}>
-              Run it on the live scope
+              Run it on the live network
             </button>
             <p className="text-xs text-faint">Launches the same attack, at this speed, against the live sensor (which keeps its default thresholds).</p>
             {launched && (
