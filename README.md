@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="docs/kon.svg" width="100%" alt="PacketEye. A plush orange lion in headphones and sunglasses panics, changes into a robed swordsman and slashes the hollows breaking out of the sky.">
-</p>
-
 # PacketEye · Network intrusion detection
 
 Real-time intrusion detection that runs in your browser: behaviour detectors, Suricata-syntax rules, JA4 TLS fingerprints and an unsupervised model in one sensor. Live demo: **[packeteye.vercel.app](https://packeteye.vercel.app)**. No sign-up, and no data leaves your machine.
