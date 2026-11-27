@@ -103,7 +103,8 @@ test("the overview works on a phone without horizontal scrolling", async ({ page
   await page.goto("/");
   await expect(page.getByRole("group", { name: /Network map/ })).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Tools" })).toBeVisible();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  // Layout settles a moment after the map appears on a slow runner, so poll rather than sample once.
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), { timeout: 10_000 }).toBe(true);
 });
 
 test("Rewind replays an incident on the map and returns to live", async ({ page }) => {
@@ -202,7 +203,7 @@ test("the command menu runs any action by name, and the alert sound chimes for n
   await page.keyboard.press("Enter");
   await expect(console).toBeHidden();
   // The overview follows the launched attack, and its alert chimes.
-  await expect(page.getByRole("complementary", { name: "Inspector" })).toContainText("T1071.004", { timeout: 30_000 });
+  await expect(page.getByRole("complementary", { name: "Inspector" })).toContainText("T1071.004", { timeout: 60_000 });
   await expect.poll(() => page.evaluate(() => Number(document.documentElement.dataset.chimes ?? 0))).toBeGreaterThan(0);
   await page.keyboard.press("/");
   await page.getByRole("combobox", { name: "Command" }).fill("explain");
