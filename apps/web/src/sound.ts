@@ -18,6 +18,20 @@ export function useAlertSound(): { on: boolean; toggle: () => void; chime: (s: S
     }
   });
   const ctx = useRef<AudioContext | null>(null);
+  // Browsers only start audio from a user gesture. When the sound was left on from a previous
+  // visit, wake the audio on the first click or key press instead of chiming into a suspended context.
+  useEffect(() => {
+    if (!on) return;
+    const wake = () => {
+      (ctx.current ??= new AudioContext()).resume().catch(() => {});
+    };
+    window.addEventListener("pointerdown", wake, { once: true });
+    window.addEventListener("keydown", wake, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", wake);
+      window.removeEventListener("keydown", wake);
+    };
+  }, [on]);
   useEffect(() => {
     try {
       localStorage.setItem("packeteye-sound", on ? "1" : "0");
@@ -28,8 +42,12 @@ export function useAlertSound(): { on: boolean; toggle: () => void; chime: (s: S
   const chime = useCallback(
     (s: Severity) => {
       if (!on) return;
-      const ac = (ctx.current ??= new AudioContext());
-      if (ac.state === "suspended") void ac.resume();
+      const ac = ctx.current;
+      if (!ac) return;
+      if (ac.state !== "running") {
+        ac.resume().catch(() => {});
+        return;
+      }
       const t = ac.currentTime + 0.01;
       const o = ac.createOscillator();
       const g = ac.createGain();

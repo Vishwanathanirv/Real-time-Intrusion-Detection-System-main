@@ -46,11 +46,13 @@ export type Seen = {
   internet?: string[];
 };
 
-function slot(list: string[], ip: string, xs: number[], per: number) {
+export function slot(list: string[], ip: string, xs: number[], per: number) {
   const i = Math.max(0, list.indexOf(ip));
-  const col = Math.min(xs.length - 1, Math.floor(i / per));
-  const inCol = Math.min(per, Math.max(1, list.length - col * per));
-  const row = i - col * per;
+  // Once every column is full, rows tighten instead of spilling below the map.
+  const fit = Math.max(per, Math.ceil(list.length / xs.length));
+  const col = Math.min(xs.length - 1, Math.floor(i / fit));
+  const inCol = Math.min(fit, Math.max(1, list.length - col * fit));
+  const row = Math.min(inCol - 1, i - col * fit);
   const y =
     inCol === 1
       ? 0
@@ -173,7 +175,20 @@ export function NetworkMap({
     moved: boolean;
   } | null>(null);
 
-  const open = alerts.filter((a) => (a.status ?? "open") === "open");
+  const open = useMemo(
+    () => alerts.filter((a) => (a.status ?? "open") === "open"),
+    [alerts],
+  );
+  const hotPairs = useMemo(() => {
+    const set = new Set<string>();
+    for (const x of open) {
+      const a = hostOf(x.src);
+      const b = hostOf(x.dst);
+      set.add(`${a}>${b}`);
+      set.add(`${b}>${a}`);
+    }
+    return set;
+  }, [open]);
   const alarmed = useMemo(() => {
     const m = new Map<string, Alert["severity"]>();
     for (const a of open)
@@ -226,7 +241,17 @@ export function NetworkMap({
       r: Math.max(6, Math.min(15, 3 + Math.log10(Math.max(10, n.bytes)) * 2)),
     }));
   }, [full]);
-  const byIp = new Map(nodes.map((n) => [n.ip, n]));
+  const byIp = useMemo(() => new Map(nodes.map((n) => [n.ip, n])), [nodes]);
+  const neighbours = useMemo(() => {
+    const m = new Map<string, Set<string>>();
+    for (const e of full.edges) {
+      if (!m.has(e.src)) m.set(e.src, new Set());
+      if (!m.has(e.dst)) m.set(e.dst, new Set());
+      m.get(e.src)!.add(e.dst);
+      m.get(e.dst)!.add(e.src);
+    }
+    return m;
+  }, [full]);
   const focus =
     selection?.kind === "host"
       ? new Set([selection.ip])
@@ -276,7 +301,7 @@ export function NetworkMap({
           ref={svg}
           viewBox={VIEWBOX}
           className="block aspect-[31/15] w-full min-w-[760px] touch-none select-none"
-          role="img"
+          role="group"
           aria-label={`Network map: ${nodes.length} hosts, ${full.edges.length} conversations, ${open.length} open alerts`}
           onWheel={onWheel}
           onPointerDown={onDown}
@@ -293,11 +318,7 @@ export function NetworkMap({
               const a = byIp.get(e.src);
               const b = byIp.get(e.dst);
               if (!a || !b) return null;
-              const hot = open.some(
-                (x) =>
-                  (hostOf(x.src) === e.src && hostOf(x.dst) === e.dst) ||
-                  (hostOf(x.src) === e.dst && hostOf(x.dst) === e.src),
-              );
+              const hot = hotPairs.has(`${e.src}>${e.dst}`);
               const dim = focus && !focus.has(e.src) && !focus.has(e.dst);
               const w = e.bytes
                 ? 0.6 + (Math.log1p(e.bytes) / Math.log1p(maxEdge)) * 2.4
@@ -337,11 +358,7 @@ export function NetworkMap({
               const dim =
                 focus &&
                 !focus.has(n.ip) &&
-                !full.edges.some(
-                  (e) =>
-                    (focus.has(e.src) && e.dst === n.ip) ||
-                    (focus.has(e.dst) && e.src === n.ip),
-                );
+                ![...(neighbours.get(n.ip) ?? [])].some((ip) => focus.has(ip));
               const sel = focus?.has(n.ip);
               const fill =
                 sev === "critical" || sev === "high"
@@ -365,10 +382,12 @@ export function NetworkMap({
                     e.stopPropagation();
                     onSelect({ kind: "host", ip: n.ip });
                   }}
-                  onKeyDown={(e) =>
-                    (e.key === "Enter" || e.key === " ") &&
-                    onSelect({ kind: "host", ip: n.ip })
-                  }
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter" && e.key !== " ") return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onSelect({ kind: "host", ip: n.ip });
+                  }}
                   onPointerEnter={() => setHover(n.ip)}
                   onPointerLeave={() => setHover(null)}
                 >
