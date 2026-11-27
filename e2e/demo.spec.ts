@@ -4,7 +4,7 @@ test("every tool opens without errors", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
-  await expect(page.getByRole("img", { name: /Network map: \d+ hosts/ })).toBeVisible();
+  await expect(page.getByRole("group", { name: /Network map: \d+ hosts/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: "The network right now" })).toBeVisible();
   for (const [path, heading] of [
     ["/alerts", "Alerts"],
@@ -92,7 +92,7 @@ test.describe("with reduced motion", () => {
   test.use({ reducedMotion: "reduce" });
   test("moving traffic lines stand still", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("img", { name: /Network map/ })).toBeVisible();
+    await expect(page.getByRole("group", { name: /Network map/ })).toBeVisible();
     await expect(page.locator(".flow").first()).toBeAttached({ timeout: 30_000 });
     expect(await page.locator(".flow").first().evaluate((el) => getComputedStyle(el).animationName)).toBe("none");
   });
@@ -101,7 +101,7 @@ test.describe("with reduced motion", () => {
 test("the overview works on a phone without horizontal scrolling", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  await expect(page.getByRole("img", { name: /Network map/ })).toBeVisible();
+  await expect(page.getByRole("group", { name: /Network map/ })).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Tools" })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
