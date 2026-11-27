@@ -9,6 +9,8 @@ import { hostOf, NetworkMap, ROLE, type Selection } from "./map";
 import { buildReport, encodeReport } from "./report-codec";
 import { Palette, type Command } from "./palette";
 import { useAlertSound } from "./sound";
+
+const SEVERITY_ORDER: Record<Alert["severity"], number> = { low: 0, medium: 1, high: 2, critical: 3 };
 import { ActionsContext, Plain, usePlainSetting, type Actions } from "./actions";
 import { alertsAt, canReplay, frameAt, incidentWindow, Scrubber, useReplayClock, type Replay } from "./replay";
 import { AlertBody, Bars, SevBadge, Strip, TrafficChart } from "./ui";
@@ -100,7 +102,12 @@ function HostCard({ ip, live, onAlert }: { ip: string; live: Live; onAlert: (a: 
   const node = g?.nodes.find((n) => n.ip === ip);
   const peers = (g?.edges ?? []).filter((e) => e.src === ip || e.dst === ip).sort((a, b) => b.bytes - a.bytes);
   const related = live.alerts.filter((a) => hostOf(a.src) === ip || hostOf(a.dst) === ip);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<"ok" | "failed" | null>(null);
+  useEffect(() => {
+    if (!copied) return;
+    const t = setTimeout(() => setCopied(null), 1400);
+    return () => clearTimeout(t);
+  }, [copied]);
   return (
     <div className="space-y-6">
       <div>
@@ -109,14 +116,17 @@ function HostCard({ ip, live, onAlert }: { ip: string; live: Live; onAlert: (a: 
         {ROLE[ip] && <div className="lcd text-sm text-muted">{ip}</div>}
         <button
           className="btn mt-3 h-8"
-          onClick={() =>
-            void navigator.clipboard?.writeText(ip).then(() => {
-              setCopied(true);
-              setTimeout(() => setCopied(false), 1400);
-            })
-          }
+          onClick={async () => {
+            try {
+              if (!navigator.clipboard) throw new Error("no clipboard");
+              await navigator.clipboard.writeText(ip);
+              setCopied("ok");
+            } catch {
+              setCopied("failed");
+            }
+          }}
         >
-          {copied ? "Copied" : "Copy address"}
+          {copied === "ok" ? "Copied" : copied === "failed" ? "Copy failed" : "Copy address"}
         </button>
       </div>
       <section>
@@ -174,11 +184,14 @@ function Shell() {
       heard.current = new Set(live.alerts.map((a) => a.id));
       return;
     }
+    // One chime per update, at the worst new severity, so a burst of alerts is one sound.
+    let worst: Alert["severity"] | null = null;
     for (const a of live.alerts)
       if (!heard.current.has(a.id)) {
         heard.current.add(a.id);
-        sound.chime(a.severity);
+        if (!worst || SEVERITY_ORDER[a.severity] > SEVERITY_ORDER[worst]) worst = a.severity;
       }
+    if (worst) sound.chime(worst);
   }, [live.alerts, live.connected, sound]);
   const s = live.stats;
   const frames = live.frames;
@@ -224,7 +237,18 @@ function Shell() {
         setPalette((v) => !v);
         return;
       }
-      if (["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName) || e.metaKey || e.ctrlKey || e.altKey || palette) return;
+      if (
+        ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName) ||
+        el.isContentEditable ||
+        el.closest?.('[role="slider"]') ||
+        e.repeat ||
+        (e.shiftKey && e.key !== "?") ||
+        e.metaKey ||
+        e.ctrlKey ||
+        e.altKey ||
+        palette
+      )
+        return;
       if (e.key === "/" || e.key === "?") {
         e.preventDefault();
         setPalette(true);
@@ -242,7 +266,7 @@ function Shell() {
       }
       if ((e.key === "l" || e.key === "L") && replay) setReplay(null);
       if (e.key === "e" || e.key === "E") setPlain(!plain);
-      if (e.key === " " && replay && !(el.closest("button") || el.getAttribute("role") === "slider")) {
+      if (e.key === " " && replay && !el.closest?.('button,[role="button"]')) {
         e.preventDefault();
         setReplay({ ...replay, playing: !replay.playing });
       }
